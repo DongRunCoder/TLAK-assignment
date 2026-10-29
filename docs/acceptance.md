@@ -27,6 +27,8 @@
 
 v0.1.1 [三平台原生构建、逐平台解包执行与发布已通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)，[Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1) 保留三平台安装包及校验信息。发布工具源码来自 tag `v0.1.1`，后续CI等待修正仅涉及测试脚本和workflow，不更改工具二进制。
 
+最终完整 [CI 已成功](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40919015848)，验证 commit `1c58303124d70e3676a37dfc4208102406137981`。三平台发布源码为 `68ab439c4df804023064211af1c015c159381121`；API确认 Release 为公开、非draft，包含 darwin-arm64、darwin-x86_64、windows-x86_64 三包及 `SHA256SUMS`、`release-metadata.json`。本段后续提交仅记录验证结果，未修改已通过的代码。
+
 ## P0：2026-10-29 已通过
 
 实际环境见 `evidence/environment.json`：Node 26.13.0、Go 1.27.3 windows/amd64、uv 0.11.7、CLI 0.1.61、SDK 0.26.0、schema 0.30.0、runtime-local 0.2.0a30、core 0.26.1。npm lockfile 固定 JS 依赖，python-constraints.txt 固定 core。

@@ -4,6 +4,8 @@
 
 公开仓库：[DongRunCoder/TLAK-assignment](https://github.com/DongRunCoder/TLAK-assignment)。实际验收见 [docs/acceptance.md](docs/acceptance.md)，远程运行结果见 [Actions](https://github.com/DongRunCoder/TLAK-assignment/actions)。
 
+v0.1.1 已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40919015848)、[三平台原生构建与发布](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)、[Release 下载](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1)。
+
 历史基线 v0.1.0 已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。当前源码版本为 v0.1.1，新增首次引导、无模型提示和总结安全加固；实际验证记录见验收文档。
 
 ## 环境与安装
