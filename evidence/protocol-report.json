@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "checks": 11,
+  "executable": "C:\\Users\\dongrun\\Desktop\\TLAK\\.build\\mini-notes-summarizer.exe",
+  "sha256": "85afcc15fe7afd41ebf3494b230a5765ee637d9eaca35873ad38a65a522b08c0",
+  "transcript": "C:\\Users\\dongrun\\Desktop\\TLAK\\evidence\\protocol.jsonl",
+  "startedAt": "2026-10-29T14:29:30.835Z",
+  "completedAt": "2026-10-29T14:29:31.232Z"
+}

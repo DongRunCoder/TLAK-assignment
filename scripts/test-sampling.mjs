@@ -1,0 +1,31 @@
+import { spawn } from 'node:child_process';
+import assert from 'node:assert/strict';
+import { readFile, mkdir, writeFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { ROOT, annaCommand, environment } from './lib.mjs';
+
+const fixtureFile = resolve(ROOT, 'fixtures/sampling/success.jsonl');
+const lines = (await readFile(fixtureFile, 'utf8')).trim().split(/\r?\n/).map(line => JSON.parse(line));
+assert.equal(lines.length, 1);
+const fixture = lines[0];
+assert.equal(fixture.ns, 'sampling'); assert.equal(fixture.method, 'createMessage');
+assert.equal(fixture.result.content.type, 'text'); assert(fixture.result.content.text.includes('MINI_NOTES_FIXTURE_7E91'));
+const args = ['executa', 'dev', '--dir', './executas/mini-notes-summarizer', '--mock-sampling', fixtureFile, '--invoke', 'summarize', '--args', JSON.stringify({ notes: ['明天联系客户', '修复登录问题'] }), '--json'];
+const [command, argv] = annaCommand(args);
+const result = await new Promise((resolveResult, reject) => {
+  const child = spawn(command, argv, { cwd: ROOT, env: environment(), stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '', stderr = '';
+  child.stdout.setEncoding('utf8'); child.stderr.setEncoding('utf8');
+  child.stdout.on('data', chunk => stdout += chunk); child.stderr.on('data', chunk => stderr += chunk);
+  const timer = setTimeout(() => { child.kill(); reject(new Error('official sampling runner timed out')); }, 120_000);
+  child.on('error', error => { clearTimeout(timer); reject(error); });
+  child.on('exit', code => { clearTimeout(timer); resolveResult({ code, stdout, stderr }); });
+});
+await mkdir(resolve(ROOT, 'evidence'), { recursive: true });
+await writeFile(resolve(ROOT, 'evidence/cli-sampling.stderr.log'), result.stderr);
+await writeFile(resolve(ROOT, 'evidence/cli-sampling.json'), result.stdout);
+assert.equal(result.code, 0, result.stderr + result.stdout);
+const parsed = JSON.parse(result.stdout);
+assert.equal(parsed.success, true);
+assert.equal(parsed.data.summary, fixture.result.content.text);
+console.log('Official anna-app executa dev --mock-sampling: PASS (exact sentinel)');

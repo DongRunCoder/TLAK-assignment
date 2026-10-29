@@ -1,0 +1,20 @@
+{
+  "name": "mini-notes-summarizer",
+  "display_name": "Mini Notes Summarizer",
+  "version": "0.1.0",
+  "description": "Summarize notes using host-provided LLM sampling.",
+  "host_capabilities": ["llm.sample"],
+  "tools": [{
+    "name": "summarize",
+    "description": "Summarize an ordered list of notes.",
+    "timeout": 55,
+    "parameters": [{
+      "name": "notes",
+      "type": "array",
+      "items": {"type": "string"},
+      "required": true,
+      "description": "Non-empty notes in insertion order."
+    }]
+  }],
+  "runtime": {"type": "binary"}
+}

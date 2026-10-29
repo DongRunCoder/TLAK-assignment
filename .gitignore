@@ -1,0 +1,12 @@
+node_modules/
+.tools/
+.tmp/
+.build/
+bundle/
+dist/
+.anna/
+playwright-report/
+test-results/
+coverage/
+*.log
+!evidence/*.log

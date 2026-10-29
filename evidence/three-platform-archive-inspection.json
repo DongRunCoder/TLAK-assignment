@@ -1,0 +1,41 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "target": "darwin-arm64",
+      "archive": "C:\\Users\\dongrun\\Desktop\\TLAK\\dist\\mini-notes-summarizer-0.1.0-darwin-arm64.tar.gz",
+      "files": [
+        "manifest.json",
+        "bin/mini-notes-summarizer"
+      ],
+      "entrypoint": "bin/mini-notes-summarizer",
+      "mode": 493,
+      "binarySha256": "ab6f130f47e6fc5eb519ff3f9e840543532216f4e1cfb73e42fa4746ed23e070",
+      "runtimeExecuted": false
+    },
+    {
+      "target": "darwin-x86_64",
+      "archive": "C:\\Users\\dongrun\\Desktop\\TLAK\\dist\\mini-notes-summarizer-0.1.0-darwin-x86_64.tar.gz",
+      "files": [
+        "manifest.json",
+        "bin/mini-notes-summarizer"
+      ],
+      "entrypoint": "bin/mini-notes-summarizer",
+      "mode": 493,
+      "binarySha256": "5ff6000894ec52c32704cb701b29fe959deb69b08a11f9c955a6d0d2a9d3ccb3",
+      "runtimeExecuted": false
+    },
+    {
+      "target": "windows-x86_64",
+      "archive": "C:\\Users\\dongrun\\Desktop\\TLAK\\dist\\mini-notes-summarizer-0.1.0-windows-x86_64.zip",
+      "files": [
+        "manifest.json",
+        "bin/mini-notes-summarizer.exe"
+      ],
+      "entrypoint": "bin/mini-notes-summarizer.exe",
+      "mode": 493,
+      "binarySha256": "770c6a2b460df9c1ec6e32b08eb623b59632c995ca4ef7865288f480cd9e339d",
+      "runtimeExecuted": true
+    }
+  ]
+}

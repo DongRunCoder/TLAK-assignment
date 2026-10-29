@@ -1,0 +1,17 @@
+{
+  "generatedAt": "2026-10-29T14:13:32.094Z",
+  "node": "v26.13.0",
+  "go": "go version go1.27.3 windows/amd64",
+  "uv": "uv 0.11.7 (9d177269e 2026-04-15 x86_64-pc-windows-msvc)",
+  "packages": {
+    "@anna-ai/cli": "0.1.61",
+    "@anna-ai/app-runtime": "0.26.0",
+    "@anna-ai/app-schema": "0.30.0"
+  },
+  "pythonVersions": {
+    "runtime-local": "0.2.0a30",
+    "core": "0.26.1"
+  },
+  "sdkSha256": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351",
+  "requiresAnnaLogin": false
+}

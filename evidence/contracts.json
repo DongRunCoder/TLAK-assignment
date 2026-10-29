@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "toolId": "mini-notes-summarizer",
+  "version": "0.1.0",
+  "schema": 2,
+  "bundleEntry": "bundle/index.html",
+  "samplingCapability": true,
+  "localSamplingAclCompatibility": true
+}

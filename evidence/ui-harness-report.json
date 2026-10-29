@@ -1,0 +1,15 @@
+{
+  "url": "http://127.0.0.1:5197/",
+  "browser": "Playwright; Browser plugin not available",
+  "actualAnnaHarness": true,
+  "passed": true,
+  "consoleErrors": [],
+  "hostWarnings": [
+    {
+      "message": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "url": "http://127.0.0.1:5197/favicon.ico"
+    }
+  ],
+  "rpcCount": 15,
+  "liveSdkHash": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351"
+}

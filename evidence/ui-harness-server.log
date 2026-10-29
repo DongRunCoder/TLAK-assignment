@@ -1,0 +1,13 @@
+anna-app dev
+  manifest          C:\Users\dongrun\Desktop\TLAK\manifest.json
+  bundle            C:\Users\dongrun\Desktop\TLAK\bundle/index.html
+  runtime           uvx anna-app-runtime-local@0.2.0a30
+  browser sdk       npm @anna-ai/app-runtime
+  spawning python bridge…
+  ✓ bridge ready
+  executas          mini-notes-summarizer
+  llm bridge        disabled (--no-llm)
+  storage backend   legacy (in-memory runtime_state)
+  web backend       local (keyless ddgs + stdlib SSRF fetcher, unbilled)
+  ✓ dashboard http://localhost:5197/
+  press Ctrl+C to stop

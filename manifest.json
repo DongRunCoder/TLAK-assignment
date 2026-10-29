@@ -1,0 +1,12 @@
+{
+  "schema": 2,
+  "required_executas": [{ "tool_id": "mini-notes-summarizer", "min_version": "0.1.0" }],
+  "permissions": ["storage.read", "storage.write", "tools.invoke"],
+  "host_capabilities": ["aps.kv", "llm.sample"],
+  "ui": {
+    "bundle": { "format": "static-spa", "entry": "index.html", "external_origins": [] },
+    "views": [{ "name": "main", "title": "Mini Notes", "default": true, "entry": "index.html", "single_instance": true, "min_size": { "w": 360, "h": 360 }, "default_size": { "w": 640, "h": 640 }, "max_size": { "w": 1280, "h": 1200 } }],
+    "host_api": { "storage": ["get", "set"], "tools": ["required:mini-notes-summarizer"], "llm": ["complete"] }
+  },
+  "dev": { "user_id": 1, "seed_storage": {} }
+}

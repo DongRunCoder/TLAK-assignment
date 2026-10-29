@@ -1,0 +1,137 @@
+name: Native Executa Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing v<package-version> tag to release (for example v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.prepare.outputs.tag }}
+      source-commit: ${{ steps.prepare.outputs.source-commit }}
+      skip: ${{ steps.prepare.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          cache: npm
+      - run: npm ci
+      - name: Resolve tag and verify any existing public assets
+        id: prepare
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release.mjs prepare "$RELEASE_TAG"
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: darwin-arm64
+          - runner: macos-15-intel
+            target: darwin-x86_64
+          - runner: windows-2025
+            target: windows-x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: '3.13'
+      NATIVE_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.source-commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          cache: npm
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.11.7'
+          enable-cache: false
+      - run: npm ci
+      - run: npm run check:contracts
+      - run: npm run test:go
+      - run: npm run test:packaging
+      - name: Detect and assert native runner, then build archive
+        run: npm run package:native
+      - name: Extract fresh archive and execute initialize, describe and mock sampling
+        run: npm run smoke:archive
+      - name: Transfer this native archive and its checksums
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+      - name: Preserve extracted-binary transcript
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-${{ matrix.target }}
+          path: |
+            evidence/archive-smoke-*.json
+            .tools/archive-smoke-*/protocol*.json*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+
+  release:
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.prepare.outputs.source-commit }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          package-manager-cache: false
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-*
+          path: dist
+          merge-multiple: true
+      - name: Validate all three packages, upload a draft, verify downloads, then publish
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/release.mjs publish "$RELEASE_TAG" dist

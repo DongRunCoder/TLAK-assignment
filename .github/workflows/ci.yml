@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      UV_PYTHON: '3.13'
+      NATIVE_TARGET: windows-x86_64
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          cache: npm
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27.3'
+          cache: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: '0.11.7'
+          enable-cache: false
+      - run: npm ci
+      - run: npm run doctor
+      - run: npm run check:contracts
+      - run: npm test
+      - run: npm run build
+      - run: npm run validate
+      - run: npm run verify:harness
+      - run: npm run test:go
+      - run: npm run test:protocol
+      - run: npm run test:sampling
+      - run: npm run test:packaging
+      - run: npm run package:native
+      - run: npm run smoke:archive
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-ci-evidence
+          path: |
+            evidence/
+            dist/
+            .tools/archive-smoke-*/protocol*.json*
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
