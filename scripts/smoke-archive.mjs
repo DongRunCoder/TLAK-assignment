@@ -6,6 +6,7 @@ import * as tar from 'tar';
 import yauzl from 'yauzl';
 import { ROOT, run } from './lib.mjs';
 import { TARGETS, detectHost, selectTarget, sha256 } from './package-native.mjs';
+import { describeFingerprint } from './describe-fingerprint.mjs';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const checkedJSON = value => JSON.parse(value.toString('utf8'));
@@ -126,10 +127,7 @@ export async function smokeArchive(archive) {
   assert.equal(result.passed, true);
   assert.equal(result.executable, executable);
   assert.equal(result.sha256, inspected.binarySha256, 'Smoke executed a different binary');
-  const frames = (await readFile(transcript, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
-  const described = frames.find(frame => frame.direction === 'executa-to-host' && frame.message?.result?.name === source.name)?.message.result;
-  assert(described, 'Missing binary describe response in transcript');
-  for (const field of ['name', 'version', 'tools', 'host_capabilities']) assert.deepEqual(described[field], inspected.manifest[field], `Binary/archive ${field} mismatch`);
+  assert.equal(result.describeSha256, describeFingerprint(inspected.manifest), 'Binary/archive description mismatch');
   await mkdir(resolve(ROOT, 'evidence'), { recursive: true });
   const recordedTranscript = resolve(ROOT, `evidence/archive-${target.key}-rpc.jsonl`);
   const recordedReport = resolve(ROOT, `evidence/archive-${target.key}-protocol-report.json`);

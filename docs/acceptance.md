@@ -2,6 +2,27 @@
 
 基线为 question.md；最终方案给出设计，本文只登记实际执行的检查。使用测试样本，不含真实账号、模型 key、window token。
 
+## v0.1.1：2026-10-30 本地新增功能验收
+
+用户确认采用默认无模型验收，新增可跳过的首次说明、页尾帮助入口、精确 no-llm 提示，以及摘要/错误/权限/证据安全加固。Anna Host 存储与 tools.invoke → Executa → sampling 链路保持。
+
+实际退出 0 的检查：
+
+- 前端 63 项；包含首次说明 26 项，覆盖未知版本保护、独立 key、慢/失败/迟到响应、runtime切换、卸载、关闭与焦点。
+- `npm run test:security`：41 项，覆盖权限变异、证据默认脱敏及原始 describe 指纹一致性。
+- `npm run test:go`：完整 Go 测试；新增摘要 16384 / stopReason 64 UTF-8 字节边界、敏感 Host 错误不回传、恶意输入协议隔离和输出纯文本。
+- `npm run build`、`npm run check:contracts`、`npm run validate`。
+- `npm run test:protocol`：11 组；`npm run test:sampling`：官方 runner 精确 fixture 比较通过。
+- `npm run verify:harness`：真实全新 Anna iframe 会话，18 次 Host 调用；guide/notes key 分离、帮助重开、CRUD、显式重读、真正 tools.invoke 和预期 no-llm 提示。
+- `npm run test:packaging`：8 项；本机 `package:native` 生成 0.1.1 Windows ZIP，`smoke:archive` 从解包后二进制执行 11 组协议检查通过。
+- 独立真实 harness 视觉检查 960×900、640×640、360×640 和360×360，包含弹窗展开滚动、Esc、焦点恢复及 Host 详情；无横向溢出或应用控制台错误。
+
+独立评审发现并复现了“脱敏 transcript 与原始 archive manifest 比较”的验包回归。现改为在原始 describe 上生成规范化 SHA-256，再与原始 archive manifest 指纹比较；不恢复公开原文。新增等价/变异测试及实际 smoke 均通过，独立复核关闭该问题。
+
+公开 RPC 正文、凭据、会话标识与诊断默认脱敏，内存断言仍验证原始真实参数。mock 验证的是协议与动作边界，不是实际模型的抗注入成功率。原始 question.md SHA-256 仍为 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
+
+本地新版体验服务使用 `http://localhost:5198/`，原5180会话未重启。三平台远端发布结果在对应版本 Actions / Release 中记录。
+
 ## P0：2026-10-29 已通过
 
 实际环境见 `evidence/environment.json`：Node 26.13.0、Go 1.27.3 windows/amd64、uv 0.11.7、CLI 0.1.61、SDK 0.26.0、schema 0.30.0、runtime-local 0.2.0a30、core 0.26.1。npm lockfile 固定 JS 依赖，python-constraints.txt 固定 core。

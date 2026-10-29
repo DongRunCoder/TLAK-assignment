@@ -1,11 +1,11 @@
 {
   "passed": true,
-  "archive": "C:\\Users\\dongrun\\Desktop\\TLAK\\dist\\mini-notes-summarizer-0.1.0-windows-x86_64.zip",
-  "archiveSha256": "e3f56d4d7337e0cba7fddaa435ece0ee0bac50d87aca0c3820ded9c16f878b2b",
+  "archive": "C:\\Users\\dongrun\\Desktop\\TLAK\\dist\\mini-notes-summarizer-0.1.1-windows-x86_64.zip",
+  "archiveSha256": "7be94e52ff2dc4232d1fba1c877120a18f36ca9f494d41036bfaa15ba00ada03",
   "target": "windows-x86_64",
-  "extractedDirectory": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-7ASxSd\\unpacked",
-  "executable": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-7ASxSd\\unpacked\\bin\\mini-notes-summarizer.exe",
-  "binarySha256": "770c6a2b460df9c1ec6e32b08eb623b59632c995ca4ef7865288f480cd9e339d",
+  "extractedDirectory": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-1AeWLz\\unpacked",
+  "executable": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-1AeWLz\\unpacked\\bin\\mini-notes-summarizer.exe",
+  "binarySha256": "af8b35be5c830be6c71bbf4882ac35a2a621356254cc7426e359ba3c91b60c74",
   "transcript": "C:\\Users\\dongrun\\Desktop\\TLAK\\evidence\\archive-windows-x86_64-rpc.jsonl",
   "protocolReport": "C:\\Users\\dongrun\\Desktop\\TLAK\\evidence\\archive-windows-x86_64-protocol-report.json",
   "checks": 11

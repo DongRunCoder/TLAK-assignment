@@ -4,6 +4,7 @@ import { assertCanAdd, MAX_BODY_BYTES, messageOf, notesBodyBytes, utf8Bytes } fr
 import { NotesList } from './NotesList';
 import { SummaryPanel } from './SummaryPanel';
 import { Icon } from './Icon';
+import { UsageGuide } from './UsageGuide';
 
 export function MiniNotesApp({ connection }: { connection: RuntimeConnection }) {
   const app = useMiniNotes(connection);
@@ -53,6 +54,6 @@ export function MiniNotesApp({ connection }: { connection: RuntimeConnection }) 
           disabled={!ready || !snapshot.notes.length || app.summary.running} aria-busy={app.summary.running}>Summarize</button>
       </section>
     </div>
-    <footer className="app-footer">笔记通过 Anna Host storage 保存；总结由 Executa sampling 返回。</footer>
+    <footer className="app-footer"><p>笔记通过 Anna Host storage 保存；总结由 Executa sampling 返回。</p><UsageGuide runtime={app.anna} /></footer>
   </main>;
 }

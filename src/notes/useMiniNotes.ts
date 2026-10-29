@@ -3,9 +3,10 @@ import type { AnnaRuntime } from '../anna/types';
 import { documentFingerprint, EMPTY_DOCUMENT, messageOf } from './model';
 import { NotesRepository, type RepositorySnapshot } from './repository';
 import { summarizeNotes, type SummaryResult } from '../summary/service';
+import { SummaryRequestError } from '../summary/errors';
 
 export interface RuntimeConnection { connect(): Promise<AnnaRuntime> }
-interface SummaryState { status: 'idle' | 'running' | 'success' | 'error' | 'stale'; running: boolean; result?: SummaryResult; error?: string }
+interface SummaryState { status: 'idle' | 'running' | 'success' | 'error' | 'stale' | 'no-llm'; running: boolean; result?: SummaryResult; error?: string }
 const idleSnapshot: RepositorySnapshot = { document: EMPTY_DOCUMENT, notes: [], status: 'loading', error: null, mutation: null };
 const idleSubscribe = () => () => {};
 const getIdleSnapshot = () => idleSnapshot;
@@ -105,13 +106,15 @@ export function useMiniNotes(connection: RuntimeConnection) {
       if (!alive.current) return;
       if (token !== summaryToken.current || (expectedFingerprint && expectedFingerprint !== documentFingerprint(repository.getSnapshot().document))) {
         setSummary({ status: 'stale', running: false });
+      } else if (error instanceof SummaryRequestError && error.kind === 'no-llm') {
+        setSummary({ status: 'no-llm', running: false });
       } else setSummary({ status: 'error', running: false, error: `总结失败：${messageOf(error)}` });
     } finally {
       summaryInFlight.current = false;
       if (alive.current) setSummary(previous => previous.running ? { ...previous, running: false } : previous);
     }
   }
-  return { runtimeStatus, snapshot, composer, summary,
+  return { runtimeStatus, anna: runtimeStatus === 'ready' ? runtime.current : undefined, snapshot, composer, summary,
     error: connectionError ?? operationError ?? snapshot.error ?? summary.error ?? null,
     changeComposer: (text: string) => { setComposer(text); setOperationError(null); },
     retryConnection: () => setRetry(value => value + 1), save, remove, reread, summarize };

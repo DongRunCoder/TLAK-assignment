@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ROOT, annaCommand, environment } from './lib.mjs';
+import { createHash } from 'node:crypto';
+import { redactEvidence } from './redact-evidence.mjs';
 
 const fixtureFile = resolve(ROOT, 'fixtures/sampling/success.jsonl');
 const lines = (await readFile(fixtureFile, 'utf8')).trim().split(/\r?\n/).map(line => JSON.parse(line));
@@ -22,10 +24,16 @@ const result = await new Promise((resolveResult, reject) => {
   child.on('exit', code => { clearTimeout(timer); resolveResult({ code, stdout, stderr }); });
 });
 await mkdir(resolve(ROOT, 'evidence'), { recursive: true });
-await writeFile(resolve(ROOT, 'evidence/cli-sampling.stderr.log'), result.stderr);
-await writeFile(resolve(ROOT, 'evidence/cli-sampling.json'), result.stdout);
-assert.equal(result.code, 0, result.stderr + result.stdout);
-const parsed = JSON.parse(result.stdout);
+await writeFile(resolve(ROOT, 'evidence/cli-sampling.stderr.log'), result.stderr ? '[REDACTED runner diagnostics]\n' : '');
+assert.equal(result.code, 0, 'official sampling runner failed; raw diagnostics are not published');
+let parsed;
+try { parsed = JSON.parse(result.stdout); }
+catch { throw new Error('official sampling runner returned invalid JSON; raw output is not published'); }
 assert.equal(parsed.success, true);
-assert.equal(parsed.data.summary, fixture.result.content.text);
+assert(parsed.data?.summary === fixture.result.content.text, 'official sampling result must exactly match the fixed fixture');
+await writeFile(resolve(ROOT, 'evidence/cli-sampling.json'), JSON.stringify({
+  ...redactEvidence(parsed), passed: true, fixtureMatched: true,
+  expectedSummarySha256: createHash('sha256').update(fixture.result.content.text).digest('hex'),
+  sourceTest: 'scripts/test-sampling.mjs', reproduce: 'npm run test:sampling',
+}, null, 2) + '\n');
 console.log('Official anna-app executa dev --mock-sampling: PASS (exact sentinel)');

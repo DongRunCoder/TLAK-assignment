@@ -1,16 +1,19 @@
 {
-  "url": "http://127.0.0.1:5197/",
+  "url": "[REDACTED]",
+  "sourceTest": "scripts/test-harness.mjs",
+  "reproduce": "npm run verify:harness",
   "browser": "Playwright; Browser plugin not available",
   "actualAnnaHarness": true,
   "passed": true,
   "consoleErrors": [],
+  "httpErrors": [],
   "hostWarnings": [
     {
-      "message": "Failed to load resource: the server responded with a status of 404 (Not Found)",
-      "url": "http://127.0.0.1:5197/favicon.ico"
+      "message": "[REDACTED]",
+      "url": "[REDACTED]"
     }
   ],
-  "rpcCount": 16,
-  "liveSdkHash": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351",
-  "committedTranscript": "Note bodies are redacted. Fixed test inputs are defined in scripts/test-harness.mjs."
+  "responseErrors": [],
+  "rpcCount": 18,
+  "liveSdkHash": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351"
 }

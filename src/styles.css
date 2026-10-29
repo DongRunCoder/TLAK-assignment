@@ -379,3 +379,89 @@ textarea[aria-invalid="true"] { border-color: var(--color-error); }
   button, textarea { transition: none; }
   .summary-action[aria-busy="true"] { animation: none; }
 }
+
+.usage-guide-entry { margin-top: 6px; }
+.app-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; }
+.app-footer > p { flex: 1 1 280px; margin: 0; }
+.app-footer .usage-guide-entry { flex: 0 1 auto; min-width: 0; margin-top: 0; }
+.usage-guide-help { min-height: 32px; padding: 4px 0; font-size: 12px; }
+.usage-guide-preference-status { margin: 4px 0 0; color: var(--color-secondary); font-size: 12px; }
+
+.usage-guide-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: rgb(29 29 31 / 32%);
+  overscroll-behavior: contain;
+}
+
+.usage-guide-dialog {
+  width: min(100%, 600px);
+  min-width: 0;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  padding: 28px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  background: #ffffff;
+  color: var(--color-text);
+  box-shadow: 0 16px 64px rgb(0 0 0 / 16%);
+  font-size: 14px;
+  line-height: 1.8;
+  overscroll-behavior: contain;
+}
+
+.usage-guide-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.usage-guide-heading h2 { padding-top: 2px; font-size: 24px; }
+.usage-guide-close {
+  flex: none;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-panel);
+  color: var(--color-secondary);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1;
+}
+.usage-guide-close:hover:enabled, .usage-guide-close:active:enabled { background: #ebebee; color: var(--color-text); }
+.usage-guide-dialog p { margin: 14px 0 0; }
+.usage-guide-dialog .usage-guide-intro { margin-top: 20px; font-size: 16px; }
+.usage-guide-model-note { color: var(--color-secondary); }
+.usage-guide-dialog code { font-size: .94em; overflow-wrap: anywhere; }
+.usage-guide-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 24px; }
+.usage-guide-actions > button { min-height: 40px; }
+.usage-guide-actions .secondary { padding: 6px 0; }
+.usage-guide-details { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-border); }
+.usage-guide-details section + section { margin-top: 20px; }
+.usage-guide-details h3 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.6; }
+.usage-guide-details p { margin-top: 8px; color: #48484d; }
+
+.mode-notice p + p { margin-top: 8px; }
+.mode-notice strong { color: var(--color-text); font-size: 14px; font-weight: 600; }
+.mode-notice .test-command {
+  display: block;
+  margin: 8px 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.mode-notice details { margin-top: 12px; color: var(--color-secondary); font-size: 12px; }
+.mode-notice summary { width: fit-content; max-width: 100%; cursor: pointer; }
+.mode-notice summary:focus-visible { outline: 3px solid var(--color-blue); outline-offset: 3px; border-radius: 4px; }
+.mode-notice details code { display: block; margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+@media (max-width: 600px) {
+  .usage-guide-backdrop { padding: 16px; }
+  .usage-guide-dialog { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 24px 20px; }
+  .usage-guide-heading { gap: 12px; }
+  .usage-guide-heading h2 { font-size: 22px; }
+  .usage-guide-actions { flex-direction: column; align-items: stretch; gap: 8px; }
+  .usage-guide-actions > button { width: 100%; }
+}

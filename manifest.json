@@ -1,6 +1,6 @@
 {
   "schema": 2,
-  "required_executas": [{ "tool_id": "mini-notes-summarizer", "min_version": "0.1.0" }],
+  "required_executas": [{ "tool_id": "mini-notes-summarizer", "min_version": "0.1.1" }],
   "permissions": ["storage.read", "storage.write", "tools.invoke"],
   "host_capabilities": ["aps.kv", "llm.sample"],
   "ui": {

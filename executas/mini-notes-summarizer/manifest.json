@@ -1,7 +1,7 @@
 {
   "name": "mini-notes-summarizer",
   "display_name": "Mini Notes Summarizer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Summarize notes using host-provided LLM sampling.",
   "host_capabilities": ["llm.sample"],
   "tools": [{

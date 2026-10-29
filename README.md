@@ -4,7 +4,7 @@
 
 公开仓库：[DongRunCoder/TLAK-assignment](https://github.com/DongRunCoder/TLAK-assignment)。实际验收见 [docs/acceptance.md](docs/acceptance.md)，远程运行结果见 [Actions](https://github.com/DongRunCoder/TLAK-assignment/actions)。
 
-已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。
+历史基线 v0.1.0 已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。当前源码版本为 v0.1.1，新增首次引导、无模型提示和总结安全加固；实际验证记录见验收文档。
 
 ## 环境与安装
 
@@ -30,6 +30,7 @@ Anna CLI 为本地 devDependency `@anna-ai/cli@0.1.61`，脚本无需全局 anna
 ```text
 src/anna/                 SDK 连接、Host 类型、工具 identity
 src/notes/                版本化笔记、storage repository、应用状态
+src/onboarding/           独立使用说明偏好与有限等待
 src/summary/              tools.invoke 和结果校验
 src/components/           composer、列表、总结和提示
 manifest.json             Anna App 配置和 Host ACL
@@ -64,11 +65,15 @@ validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 
 
 开发时也可用 `npm run dev` 运行构建 watch 与 Anna harness。退出时 Ctrl+C。bundle 修改只重载内层 iframe；外层 dashboard 刷新或重启 dev 可能清空 legacy 内存数据，这是题目允许的生命周期。
 
+首次连接后会显示“开始使用 Mini Notes”说明，可点击“开始使用（无需配置模型）”、关闭或按 Esc 继续。页尾“使用说明”可随时重新打开，展开查看两条独立验收路径。弹窗不安装依赖、不收集凭据，也不检测或修改 Host 的模型配置。
+
+引导标记保存在独立的 Anna storage key `mini-notes:onboarding:v1`，与笔记 key `mini-notes:document:v1` 分离。引导读写各最多等待 2 秒，失败或未知版本不覆盖原值，也不会锁住笔记。legacy 外层会话重置后，引导允许重新出现。
+
 在新会话按下表验收：
 
 | 步骤 | 操作 | 预期 |
 | --- | --- | --- |
-| A0 | 打开 App | Runtime 连接、storage.get、空列表 |
+| A0 | 打开 App，关闭首次使用说明 | Runtime 连接、notes/guide 分 key storage.get、空列表；重开帮助不影响笔记 |
 | A1 | 输入空白 | 无法保存，未调用 storage.set |
 | A2 | 保存“明天联系客户” | 序号1，保存成功后输入清空 |
 | A3 | 保存“修复登录 bug” | 序号2，再次清空输入 |
@@ -78,6 +83,8 @@ validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 
 | A7 | 点击 Summarize | tools.invoke 的 notes 是上述两条；显示 no-llm 预期错误 |
 
 在 `--no-llm` 模式，Summarize 仍真正调用 `anna.tools.invoke`、本地工具和 reverse sampling。由于 host 禁用 LLM，预期错误类似 `SAMPLING_HOST_ERROR: [-32603] harness started with --no-llm`。这是 UI 调试路径的预期结果，**不代表后端 sampling 实现失败**。本路径不注入假成功摘要；后端成功由下一节单独验证。
+
+UI 仅在真实收到上述明确错误后显示“当前为无模型验收模式”、独立 sampling 命令及可展开的 Host 返回详情；其他 `-32603`、权限或超时错误仍按失败处理，不会误报验收通过。Summarize 仍可重试，不依据引导选择关闭工具调用。
 
 可自动驱动同一真实流程：保持 harness 运行，在另一终端执行 `npm run test:harness`。本机使用独立无头 Edge，不读取个人浏览器资料；Linux CI 使用 `PLAYWRIGHT_CHANNEL=chromium` 和 `npx playwright install --with-deps chromium`。截图只保存 App，不保存带临时 window token 的 dashboard 地址栏。
 
@@ -104,6 +111,8 @@ fixture 使用官方 runner 格式，一行一条，非完整 JSON-RPC response�
 ```
 
 脚本先严格验证 fixture，再断言最终 summary 精确等于 sentinel。CLI0.1.61 在 fixture 错误或未匹配时可能返回 `(mock) no fixture matched` 的成功形态，不能只检查 success=true。
+
+提交用的 `evidence/cli-sampling.json` 对正文脱敏，保存 `fixtureMatched` 和期望总结的 SHA-256；原始精确比较在脚本内存中完成。固定 fixture 本身保留在仓库，便于复现。
 
 官方 runner 不传 invoke context，所以工具在没有 host invoke_id 时为每次调用生成独立 local-UUID，在 metadata 和 reverse context 携带同一值。App harness 提供的 invoke_id 则原样传回，不用 JSON-RPC id 替代。
 
@@ -146,10 +155,10 @@ node scripts/test-protocol.mjs --executable /absolute/path/to/binary \
 ## 如何核对 storage 与工具调用
 
 - Anna dashboard 右侧 RPC LOG 可直接看 `storage.get`、`storage.set`、`tools.invoke` 实参和结果。笔记读写 key 为 `mini-notes:document:v1`。
-- `npm run test:harness` 抓取真实 `/api/session/call` 的 request/response，保存到 `evidence/ui-host-rpc.jsonl`；每行包含 ns/method/args/response，`ui-harness-report.json` 记录断言。这个自定义网络证据格式**不是** Anna recording，不交给 fixture verify。
+- `npm run test:harness` 抓取真实 `/api/session/call` 的 request/response，先在内存断言实际参数，再将脱敏副本保存到 `evidence/ui-host-rpc.jsonl`；每行保留 ns/method/args/response 结构，`ui-harness-report.json` 记录断言。正文、原始诊断、凭据和会话标识不公开；截图遮蔽正文。这个自定义网络证据格式**不是** Anna recording，不交给 fixture verify。
 - 若需要官方 recording，dashboard 点击 record 开始，执行 A0–A7，再点击停止下载 JSONL。要包含首次读取，可开始录制后只重载内层 iframe，不能刷新外层 dashboard。下载的官方格式可用 `npx anna-app fixture verify <file>` 和 `fixture summarize <file>` 检查。提交前去掉 auth/token 等敏感字段。
 - UI 记录中只有 storage/tools 和 SDK window 调用；不会出现前端 llm 调用。后端 `protocol.jsonl` 中则必须出现 reverse `sampling/createMessage`。
-- `evidence/cli-sampling.json` 是官方独立 runner 的返回值，只有它加上手动协议 transcript 才能共同证明来源与正确请求内容。
+- `evidence/cli-sampling.json` 是官方独立 runner 返回值的脱敏证据；协议 transcript 也默认脱敏。结合对应脚本的实际断言和报告，可以验证请求来源、内容及关联信息；复现命令和固定测试输入保留在源码。
 
 ## 二进制打包与验包
 
@@ -169,14 +178,14 @@ smoke 解压到全新目录，运行其中二进制的 describe 及同一完整�
 
 `.github/workflows/ci.yml` 执行依赖、测试、构建、strict validation、官方 sampling 和本机包检查。`.github/workflows/release.yml` 使用三个原生 runner，构建并验包后统一上传 **GitHub Release assets**；workflow artifacts 只负责 job 间传递。
 
-发布触发方式：推送 `v0.1.0` 等版本 tag，或在 Actions 的 Release workflow 中手动输入已经存在的 tag。tag 必须对应源码版本，dispatch checkout 的实际 commit 与 release metadata 一致；不把默认分支误贴到其他版本。
+发布触发方式：推送 `v0.1.1` 等版本 tag，或在 Actions 的 Release workflow 中手动输入已经存在的 tag。tag 必须对应源码版本，dispatch checkout 的实际 commit 与 release metadata 一致；不把默认分支误贴到其他版本。
 
 预期 Release 文件：
 
 ```text
-mini-notes-summarizer-0.1.0-darwin-arm64.tar.gz
-mini-notes-summarizer-0.1.0-darwin-x86_64.tar.gz
-mini-notes-summarizer-0.1.0-windows-x86_64.zip
+mini-notes-summarizer-0.1.1-darwin-arm64.tar.gz
+mini-notes-summarizer-0.1.1-darwin-x86_64.tar.gz
+mini-notes-summarizer-0.1.1-windows-x86_64.zip
 SHA256SUMS
 release-metadata.json
 ```
@@ -192,6 +201,14 @@ release-metadata.json
 单条最多1,000个Unicode code point、最多100条、所有正文UTF-8字节和≤24,576、文档≤192KiB；保存前提示，合法已保存列表都可发起完整总结。summary仅在当前UI保留，笔记变化后旧结果失效，不把迟到结果套到新列表。单实例队列不声称解决多窗口协同。
 
 ## 平台兼容说明
+
+安全回归运行 `npm test`、`npm run test:security`、`npm run test:go`。笔记和模型回复都视作不可信文本：固定工具路由，笔记 JSON 编码进 user 消息，回复只作 React 文本展示，不解析成工具操作、HTML、脚本或文件命令。普通含“删除文件”的待办仍可保存。
+
+Go 与前端均限定摘要不超过 16384 UTF-8 字节，stopReason 不超过 64 字节；超限或无效响应明确失败，不生成替代摘要。Host 原始错误诊断不回传，只有精确的 no-llm 错误保留标准说明。权限回归检查锁定既有 Host API / capability 集合，保留本地 reverse sampling 所需 complete ACL。
+
+公开 RPC 证据采用允许字段投影，正文、未知自由文本、会话标识及凭据脱敏。协议 report 保存内存中原始 describe 的规范化 SHA-256，archive smoke 用同样指纹核对完整工具描述、参数与能力，避免拿脱敏文案替代原始一致性校验。
+
+上述测试证明协议与动作边界、限额和权限契约；mock 不证明真实模型免疫提示词注入。Executa 的 manifest 也不是 OS 文件系统沙箱，未来引入文件或 Agent 能力需要单独评审。
 
 - App 使用 schema2 以保留题目要求的顶层 permissions；schema3 已移除此字段。实际授权仍是 ui.host_api。
 - runtime-local0.2.0a30 把 reverse sampling 转为 llm.complete 并复查 App ACL，所以额外声明 ui.host_api.llm:[complete]。这是固定本地 bridge 兼容，不是让前端直接调用模型。

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
+import { redactEvidence } from '../../scripts/redact-evidence.mjs';
 
 export function host(executable, args = [], options = {}) {
   const child = spawn(executable, args, { ...options, stdio: ['pipe', 'pipe', 'pipe'] });
@@ -21,7 +22,7 @@ export function host(executable, args = [], options = {}) {
         const index = waits.findIndex(wait => wait.predicate(message));
         if (index === -1) backlog.push({ raw, message });
         else { const [wait] = waits.splice(index, 1); clearTimeout(wait.timer); wait.resolve({ raw, message }); }
-      } catch (error) { failure = new Error(`stdout is not JSONL: ${raw}`, { cause: error }); }
+      } catch { failure = new Error('stdout is not JSONL; raw frame omitted'); }
     }
   });
   const closed = new Promise(resolve => {
@@ -29,7 +30,7 @@ export function host(executable, args = [], options = {}) {
     child.on('close', (code, signal) => {
       for (const wait of waits.splice(0)) {
         clearTimeout(wait.timer);
-        wait.reject(failure ?? new Error(`Executa exited (${code ?? signal}) before responding; stderr: ${stderr}`));
+        wait.reject(failure ?? new Error(`Executa exited (${code ?? signal}) before responding; raw stderr omitted`));
       }
       resolve({ code, signal });
     });
@@ -51,7 +52,7 @@ export function host(executable, args = [], options = {}) {
       return new Promise((resolve, reject) => {
         const wait = { predicate, resolve, reject, timer: setTimeout(() => {
           waits.splice(waits.indexOf(wait), 1);
-          reject(failure ?? new Error(`No matching protocol frame (${timeoutMs}ms); stderr: ${stderr}`));
+          reject(failure ?? new Error(`No matching protocol frame (${timeoutMs}ms); raw stderr omitted`));
         }, timeoutMs) };
         waits.push(wait);
       });
@@ -59,7 +60,9 @@ export function host(executable, args = [], options = {}) {
     async save(path) {
       if (!path) return;
       await mkdir(dirname(path), { recursive: true });
-      await writeFile(path, frames.map(frame => JSON.stringify(frame)).join('\n') + '\n');
+      await writeFile(path, frames.map(frame => JSON.stringify({
+        ...redactEvidence(frame), sourceTest: 'scripts/test-protocol.mjs', reproduce: 'npm run test:protocol',
+      })).join('\n') + '\n');
     },
     async stop() {
       child.stdin.end();
@@ -67,7 +70,7 @@ export function host(executable, args = [], options = {}) {
       await closed;
       clearTimeout(timer);
       if (failure) throw failure;
-      if (text) throw new Error(`Unterminated stdout JSON frame: ${text}`);
+      if (text) throw new Error('Unterminated stdout JSON frame; raw frame omitted');
     }
   };
 }

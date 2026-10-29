@@ -1,1 +1,13 @@
-{"data":{"stopReason":"endTurn","summary":"MINI_NOTES_FIXTURE_7E91：客户跟进和登录修复。","truncated":false},"duration_ms":0,"success":true}
+{
+  "data": {
+    "stopReason": "endTurn",
+    "summary": "[REDACTED]",
+    "truncated": false
+  },
+  "success": true,
+  "passed": true,
+  "fixtureMatched": true,
+  "expectedSummarySha256": "e83331846a04ca4221f6833c65b484e932b29eebfae448d719bbb7e4e19e77a8",
+  "sourceTest": "scripts/test-sampling.mjs",
+  "reproduce": "npm run test:sampling"
+}

@@ -4,6 +4,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { ROOT as root, environment, goPath, run } from './lib.mjs';
 import { host, request } from '../tests/protocol/host.mjs';
+import { describeFingerprint } from './describe-fingerprint.mjs';
 
 const argv = process.argv.slice(2);
 function option(name) {
@@ -28,6 +29,7 @@ const processHost = host(command, [], {
 });
 let passed = 0;
 let succeeded = false;
+let describeSha256;
 try {
   processHost.send(request(1, 'initialize', { protocolVersion: '2.0', capabilities: { sampling: {} } }));
   const initialized = (await processHost.receive(frame => frame.id === 1, 60000)).message;
@@ -40,6 +42,7 @@ try {
   assert.match(described.raw, /"id":9007199254740993(?:,|})/);
   assert.equal(described.message.result.manifest, undefined);
   assert.deepEqual(described.message.result.host_capabilities, ['llm.sample']);
+  describeSha256 = describeFingerprint(described.message.result);
   passed++;
   processHost.send(request('invoke-one', 'invoke', { tool: 'summarize', arguments: { notes: ['明天联系客户', '修复登录问题'] }, context: { invoke_id: 'protocol-invoke-1' } }));
   const reverse = (await processHost.receive(frame => frame.method === 'sampling/createMessage')).message;
@@ -152,7 +155,7 @@ try {
   try { await processHost.stop(); } finally {
     await processHost.save(transcriptPath);
     await mkdir(dirname(reportPath), { recursive: true });
-    await writeFile(reportPath, JSON.stringify({ passed: succeeded, checks: passed, executable: command, sha256, transcript: transcriptPath, startedAt, completedAt: new Date().toISOString() }, null, 2) + '\n');
+    await writeFile(reportPath, JSON.stringify({ passed: succeeded, checks: passed, executable: command, sha256, describeSha256, transcript: transcriptPath, startedAt, completedAt: new Date().toISOString() }, null, 2) + '\n');
   }
 }
 console.log(`Protocol checks passed: ${passed} (v2, raw IDs, bidirectional sampling, busy, repeat, local correlation, host correlation, truncation, errors, v1, EOF)`);

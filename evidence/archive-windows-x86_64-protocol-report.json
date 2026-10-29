@@ -1,9 +1,10 @@
 {
   "passed": true,
   "checks": 11,
-  "executable": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-7ASxSd\\unpacked\\bin\\mini-notes-summarizer.exe",
-  "sha256": "770c6a2b460df9c1ec6e32b08eb623b59632c995ca4ef7865288f480cd9e339d",
-  "transcript": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-7ASxSd\\protocol.jsonl",
-  "startedAt": "2026-10-29T14:30:07.911Z",
-  "completedAt": "2026-10-29T14:30:08.486Z"
+  "executable": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-1AeWLz\\unpacked\\bin\\mini-notes-summarizer.exe",
+  "sha256": "af8b35be5c830be6c71bbf4882ac35a2a621356254cc7426e359ba3c91b60c74",
+  "describeSha256": "b83cba02b4baaa3b53ec46dc0efc53d48929fb5388577e3bd5352b12a824a6da",
+  "transcript": "C:\\Users\\dongrun\\Desktop\\TLAK\\.tools\\archive-smoke-1AeWLz\\protocol.jsonl",
+  "startedAt": "2026-10-29T16:51:49.854Z",
+  "completedAt": "2026-10-29T16:51:50.467Z"
 }
