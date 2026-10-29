@@ -41,8 +41,8 @@ jobs:
       - run: npm run test:security
       - run: npm run build
       - run: npm run validate
-      - run: npm run verify:harness
       - run: npm run test:go
+      - run: npm run verify:harness
       - run: npm run test:protocol
       - run: npm run test:sampling
       - run: npm run test:packaging

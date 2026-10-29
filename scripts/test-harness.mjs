@@ -17,6 +17,12 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 const rpc = [], consoleErrors = [], httpErrors = [], hostWarnings = [];
 const responses = [], responseErrors = [];
 let liveSdkHash;
+let phase = 'load', toolRequestsStarted = 0, toolResponsesFinished = 0, toolStartedAt, toolElapsedMs;
+page.on('request', request => {
+  if (!request.url().endsWith('/api/session/call')) return;
+  const body = request.postDataJSON();
+  if (body.ns === 'tools' && body.method === 'invoke') { toolRequestsStarted++; toolStartedAt = Date.now(); }
+});
 page.on('console', event => {
   if (event.type() !== 'error') return;
   const detail = { message: event.text(), url: event.location().url };
@@ -38,6 +44,9 @@ page.on('response', response => {
     const row = { sequence: rpc.length + 1, ns: request.ns, method: request.method, args: request.args };
     rpc.push(row);
     row.response = await response.json();
+    if (row.ns === 'tools' && row.method === 'invoke') {
+      toolResponsesFinished++; toolElapsedMs = Date.now() - toolStartedAt;
+    }
   })();
   responses.push(pending.catch(error => responseErrors.push(String(error))));
 });
@@ -48,10 +57,12 @@ const evidenceName = p0 ? 'p0' : 'ui';
 const report = passed => ({ url, sourceTest: 'scripts/test-harness.mjs', reproduce: 'npm run verify:harness',
   browser: 'Playwright; Browser plugin not available', actualAnnaHarness: true, passed,
   consoleErrors, httpErrors, hostWarnings, responseErrors, rpcCount: rpc.length, liveSdkHash });
+const publicReport = passed => ({ ...redactEvidence(report(passed)), diagnostics: { phase, toolRequestsStarted, toolResponsesFinished, toolElapsedMs } });
 try {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await app.getByRole('heading', { name: 'Mini Notes', exact: true }).waitFor();
   await expect(page).toHaveTitle(/Anna|Harness/);
+  phase = 'guide';
   const guide = app.getByRole('dialog', { name: '开始使用 Mini Notes', exact: true });
   await guide.waitFor();
   await guide.getByRole('button', { name: '开始使用（无需配置模型）', exact: true }).click();
@@ -66,6 +77,7 @@ try {
     await app.getByRole('button', { name: '验证工具路由' }).click();
     await app.getByTestId('p0-tool-result').filter({ hasText: /harness started with --no-llm/ }).waitFor();
   } else {
+    phase = 'notes';
     const composer = app.getByRole('textbox', { name: '笔记内容' });
     await composer.fill('   ');
     assert.equal(await app.getByRole('button', { name: '保存笔记', exact: true }).isDisabled(), true);
@@ -84,15 +96,19 @@ try {
     await expect(composer).toHaveValue('');
     await app.getByRole('button', { name: '重新读取', exact: true }).click();
     await app.getByTestId('note-2').waitFor(); await app.getByTestId('note-3').waitFor();
+    phase = 'summary';
     await app.getByRole('button', { name: 'Summarize', exact: true }).click();
     const noLlmNotice = app.getByTestId('no-llm-notice');
-    await expect(noLlmNotice).toBeVisible();
+    // A fresh Windows runner may compile Go on first invoke. Match the SDK's
+    // 65s tool budget rather than Playwright expect's unrelated 5s default.
+    await expect(noLlmNotice).toBeVisible({ timeout: 70_000 });
     await expect(noLlmNotice).toContainText(NO_LLM_ERROR);
     await expect(noLlmNotice).toContainText('npm run test:sampling');
     await expect(app.getByTestId('summary-text')).toHaveCount(0);
     await expect(app.getByRole('button', { name: 'Summarize', exact: true })).toBeEnabled();
   }
   await Promise.all(responses);
+  phase = 'rpc';
   assert.deepEqual(responseErrors, []);
   const localSdkHash = createHash('sha256').update(await readFile(resolve(ROOT, 'node_modules/@anna-ai/app-runtime/dist/index.js'))).digest('hex');
   assert.equal(liveSdkHash, localSdkHash, 'actual harness SDK must match locked npm file');
@@ -130,6 +146,7 @@ try {
   if (!p0) assert.deepEqual(tool.args.args.notes, ['修复登录 bug', '整理 Workshop 想法']);
   assert.equal(rpc.filter(row => row.ns === 'llm').length, 0, 'iframe must never call llm directly');
   await writeFile(resolve(ROOT, `evidence/${evidenceName}-host-rpc.jsonl`), redactEvidence(rpc).map(row => JSON.stringify(row)).join('\n') + '\n');
+  phase = 'screenshots';
   await app.locator('body').evaluate(body => body.ownerDocument.defaultView.scrollTo(0, 0));
   await page.locator('#app').screenshot({ path: resolve(ROOT, `evidence/${evidenceName}-harness.png`), mask: [privateText] });
   if (!p0) {
@@ -138,13 +155,14 @@ try {
     await page.locator('#app').screenshot({ path: resolve(ROOT, 'evidence/ui-harness-narrow.png'), mask: [privateText] });
   }
   assert.equal(consoleErrors.length, 0, 'App console must not emit errors');
-  await writeFile(resolve(ROOT, `evidence/${evidenceName}-harness-report.json`), JSON.stringify(redactEvidence(report(true)), null, 2));
+  phase = 'complete';
+  await writeFile(resolve(ROOT, `evidence/${evidenceName}-harness-report.json`), JSON.stringify(publicReport(true), null, 2));
   console.log(`${evidenceName} actual Anna iframe/storage/tools wiring: PASS (${rpc.length} Host calls)`);
 } catch (error) {
   await page.locator('#app').screenshot({ path: resolve(ROOT, 'evidence/ui-failure.png'), mask: [privateText], timeout: 3000 }).catch(() => {});
   await Promise.all(responses);
   await writeFile(resolve(ROOT, `evidence/${evidenceName}-harness-report.json`),
-    JSON.stringify(redactEvidence({ ...report(false), error: { message: String(error) } }), null, 2));
+    JSON.stringify({ ...publicReport(false), error: { message: '[REDACTED]' } }, null, 2));
   await writeFile(resolve(ROOT, `evidence/${evidenceName}-host-rpc.jsonl`),
     redactEvidence(rpc).map(row => JSON.stringify(row)).join('\n') + '\n');
   // Playwright and assertion errors can embed private DOM/RPC values. Do not

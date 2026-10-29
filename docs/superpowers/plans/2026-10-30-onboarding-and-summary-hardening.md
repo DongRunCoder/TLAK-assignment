@@ -53,7 +53,7 @@
 - [x] 运行前端、Go、协议、安全测试以及 build、contracts、validate。
 - [x] 独立真实 harness 验证首次引导、关闭/帮助、笔记增删重读、预期 no-llm 与实际 storage/tools RPC；检查360/640/960宽度、键盘和控制台。
 - [x] 官方 mock sampling 验证成功路径；mock只证明协议/文本边界，不宣称真实模型抗注入效果。
-- [ ] 运行本机 archive 构建与 smoke；保持旧 release 不变，涉及工具版本更新时同步 identity/version并发布新的三平台产物（本机已通过，等待远端原生发布）。
+- [x] 运行本机 archive 构建与 smoke；保持旧 release 不变，涉及工具版本更新时同步 identity/version并发布新的三平台产物（v0.1.1 三平台原生构建和发布已通过）。
 - [x] 独立契约与质量评审，修复发现后重跑受影响检查。
 - [x] 更新 README 与验收证据，提交并同步既有授权仓库；保留可体验的本地服务。
 

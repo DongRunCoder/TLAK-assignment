@@ -23,6 +23,10 @@
 
 本地新版体验服务使用 `http://localhost:5198/`，原5180会话未重启。三平台远端发布结果在对应版本 Actions / Release 中记录。
 
+冷启动复验：首次远端完整 CI 在 harness 步骤因等待预算不足失败。原断言使用 Playwright 默认5秒，首次 `go run .` 编译仍在进行；此前RPC证据仅记录已返回的响应，不能据无已完成tools行认定调用未发出。已将提示等待改为70秒，对齐65秒SDK预算，并在CI先运行Go测试预热。新增无正文诊断记录请求开始/完成数和耗时；独立空Go缓存真实复验通过18次Host调用，工具请求实际耗时14862ms，明确超过原5秒窗口。App与repository无需为此修改。
+
+v0.1.1 [三平台原生构建、逐平台解包执行与发布已通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)，[Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1) 保留三平台安装包及校验信息。发布工具源码来自 tag `v0.1.1`，后续CI等待修正仅涉及测试脚本和workflow，不更改工具二进制。
+
 ## P0：2026-10-29 已通过
 
 实际环境见 `evidence/environment.json`：Node 26.13.0、Go 1.27.3 windows/amd64、uv 0.11.7、CLI 0.1.61、SDK 0.26.0、schema 0.30.0、runtime-local 0.2.0a30、core 0.26.1。npm lockfile 固定 JS 依赖，python-constraints.txt 固定 core。

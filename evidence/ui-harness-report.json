@@ -15,5 +15,11 @@
   ],
   "responseErrors": [],
   "rpcCount": 18,
-  "liveSdkHash": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351"
+  "liveSdkHash": "5aeba3c631e8426c32c27e13415a848acf682236d8858572d36d5e2038d31351",
+  "diagnostics": {
+    "phase": "complete",
+    "toolRequestsStarted": 1,
+    "toolResponsesFinished": 1,
+    "toolElapsedMs": 14862
+  }
 }
