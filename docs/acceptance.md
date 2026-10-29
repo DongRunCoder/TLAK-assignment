@@ -57,12 +57,20 @@
 - 前端：独立审阅发现 reconciling 同步事件被普通排队标记吞掉。已新增可重复失败回归并修复；原复现无需手动重读即可回到ready，写入仅一次。32项完整测试fresh通过。
 - 包：Windows上创建Mac tar曾得到0644，测试实际失败后修为0755。两个Mac包仅执行交编与结构检查，不声称在Windows运行了Mac程序。
 
-## 未执行与交付边界
+## 远程交付与三平台实证
 
 已创建并推送公开仓库 https://github.com/DongRunCoder/TLAK-assignment ，最初实现提交为27fc799856ca7af066f6fc656483ff5fd8d3abc9。GitHub使用官方设备授权；未将账户密码写入工程、脚本或凭据文件。
 
 另外从此提交的源码zip解压到全新目录，执行 npm ci、32项前端测试、build、strict validate、Go测试、官方mock sampling、8项packaging测试，全部退出0。
 
-本地实现完成（L1）、仓库已提交（L2）；远程CI与真实三平台发布增强验证（V1）正在运行确认中，尚不能把本机交编当作macOS原生测试。详见 evidence/delivery.md。
+本地实现完成（L1）、仓库已提交（L2）、真实三平台发布验证（V1）全部完成：
+
+- CI实际success：https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605 。包含真实harness验收、前端、Go、协议、官方sampling和native archive。
+- 三平台原生发布实际success：https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409 。prepare、windows-x86_64、darwin-arm64、darwin-x86_64、统一release job均成功。
+- Release：https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0 ，已公开非draft，三包、SHA256SUMS与release-metadata.json全部uploaded。
+- release tag/sourceCommit为2bb9498d6dd83cbf6bd86861a85d41827406beb7。匿名下载metadata确认源码commit和3个资产；各资产API digest及大小见evidence/github-release-verification.json。
+- workflow_dispatch实际success：https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469 。prepare下载核验既有三包与校验信息后成功，build/release均skipped，没有覆盖公开产物；见evidence/github-release-rerun.json。
+
+本机报告仍明确区分Mac交编与运行；额外的macOS原生运行证明来自上述远程原生runner，不改写本机历史事实。真实模型效果、云APS、Anna线上发布与签名均不在本题范围，没有声称验证这些项目。
 
 本轮原始要求文件 SHA-256：E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3。

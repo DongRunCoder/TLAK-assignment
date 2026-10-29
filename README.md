@@ -4,6 +4,8 @@
 
 公开仓库：[DongRunCoder/TLAK-assignment](https://github.com/DongRunCoder/TLAK-assignment)。实际验收见 [docs/acceptance.md](docs/acceptance.md)，远程运行结果见 [Actions](https://github.com/DongRunCoder/TLAK-assignment/actions)。
 
+已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。
+
 ## 环境与安装
 
 - Node **26 LTS**（本项目验证 26.13.0）；也可用当前测试依赖支持的 24.15+ / 22.22.2+。Node 25 不在支持范围。

@@ -1,0 +1,46 @@
+{
+  "repository": "https://github.com/DongRunCoder/TLAK-assignment",
+  "tag": "v0.1.0",
+  "releaseUrl": "https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0",
+  "draft": false,
+  "sourceCommit": "2bb9498d6dd83cbf6bd86861a85d41827406beb7",
+  "assets": [
+    {
+      "name": "mini-notes-summarizer-0.1.0-darwin-arm64.tar.gz",
+      "state": "uploaded",
+      "size": 1224040,
+      "digest": "sha256:e10a06e3430c5283d25eccf20bc1f77efa71730f0afc4f523784162bfda01c62",
+      "browser_download_url": "https://github.com/DongRunCoder/TLAK-assignment/releases/download/v0.1.0/mini-notes-summarizer-0.1.0-darwin-arm64.tar.gz"
+    },
+    {
+      "name": "mini-notes-summarizer-0.1.0-darwin-x86_64.tar.gz",
+      "state": "uploaded",
+      "size": 1322247,
+      "digest": "sha256:9980a577f656f771f296f0a4c3ad3692c583940e90c87b4c3f0aaa10ff6a89b5",
+      "browser_download_url": "https://github.com/DongRunCoder/TLAK-assignment/releases/download/v0.1.0/mini-notes-summarizer-0.1.0-darwin-x86_64.tar.gz"
+    },
+    {
+      "name": "mini-notes-summarizer-0.1.0-windows-x86_64.zip",
+      "state": "uploaded",
+      "size": 1336642,
+      "digest": "sha256:b5bc80de8fcfe87483302e4c6d3e7c94f80d7a115624d1ebf84e02a88ef9549b",
+      "browser_download_url": "https://github.com/DongRunCoder/TLAK-assignment/releases/download/v0.1.0/mini-notes-summarizer-0.1.0-windows-x86_64.zip"
+    },
+    {
+      "name": "release-metadata.json",
+      "state": "uploaded",
+      "size": 1655,
+      "digest": "sha256:82b64952cc2d623e543e7e0fab72427bb6e8a26cedaba46daccf6852f3b73338",
+      "browser_download_url": "https://github.com/DongRunCoder/TLAK-assignment/releases/download/v0.1.0/release-metadata.json"
+    },
+    {
+      "name": "SHA256SUMS",
+      "state": "uploaded",
+      "size": 342,
+      "digest": "sha256:28fa1e614a671fdb93439449d43e7f29d49e426008ac775e9d799288dd37d5e1",
+      "browser_download_url": "https://github.com/DongRunCoder/TLAK-assignment/releases/download/v0.1.0/SHA256SUMS"
+    }
+  ],
+  "ciRun": "https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605",
+  "releaseRun": "https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409"
+}

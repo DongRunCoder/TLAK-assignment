@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "tag": "v0.1.0",
+  "sourceCommit": "2bb9498d6dd83cbf6bd86861a85d41827406beb7",
+  "tool": {
+    "name": "mini-notes-summarizer",
+    "version": "0.1.0"
+  },
+  "runUrl": "https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409",
+  "createdAt": "2026-10-29T14:43:27.251Z",
+  "assets": [
+    {
+      "target": "darwin-arm64",
+      "name": "mini-notes-summarizer-0.1.0-darwin-arm64.tar.gz",
+      "size": 1224040,
+      "sha256": "e10a06e3430c5283d25eccf20bc1f77efa71730f0afc4f523784162bfda01c62",
+      "binarySha256": "578a535fa61ba326800cad8ea89c9289746b7058dc9d2252fcac8736510b01db",
+      "toolchain": {
+        "node": "v26.13.0",
+        "go": "go version go1.27.3 darwin/arm64",
+        "cgoEnabled": false
+      }
+    },
+    {
+      "target": "darwin-x86_64",
+      "name": "mini-notes-summarizer-0.1.0-darwin-x86_64.tar.gz",
+      "size": 1322247,
+      "sha256": "9980a577f656f771f296f0a4c3ad3692c583940e90c87b4c3f0aaa10ff6a89b5",
+      "binarySha256": "60bc3d6c0d2fea310738914261bfba4b611b91df11869629ee27923254aa723c",
+      "toolchain": {
+        "node": "v26.13.0",
+        "go": "go version go1.27.3 darwin/amd64",
+        "cgoEnabled": false
+      }
+    },
+    {
+      "target": "windows-x86_64",
+      "name": "mini-notes-summarizer-0.1.0-windows-x86_64.zip",
+      "size": 1336642,
+      "sha256": "b5bc80de8fcfe87483302e4c6d3e7c94f80d7a115624d1ebf84e02a88ef9549b",
+      "binarySha256": "662fa3eb68b2106699f023bf3a00596a59bc2929dcaea11869d298b850e59d4f",
+      "toolchain": {
+        "node": "v26.13.0",
+        "go": "go version go1.27.3 windows/amd64",
+        "cgoEnabled": false
+      }
+    }
+  ]
+}

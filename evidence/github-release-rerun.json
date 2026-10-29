@@ -1,0 +1,24 @@
+{
+  "runUrl": "https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469",
+  "event": "workflow_dispatch",
+  "tag": "v0.1.0",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "prepare",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "name": "build",
+      "status": "completed",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "release",
+      "status": "completed",
+      "conclusion": "skipped"
+    }
+  ],
+  "existingAssetsVerifiedWithoutRebuild": true
+}

@@ -9,6 +9,6 @@
 - [x] P4：本机独立二进制 archive 与解压 smoke
 - [x] P5 本地部分：CI、三平台 Release workflow、README 与验收脚本
 - [x] P5 远程交付：GitHub 公开仓库 URL、推送 commit
-- [ ] P5 增强验证：真实 CI / 三平台 Release 运行
+- [x] P5 增强验证：真实 CI / 三平台 Release 运行
 
-远程仓库：https://github.com/DongRunCoder/TLAK-assignment 。已使用用户完成的官方设备授权推送，正在跟踪CI与Release。
+远程仓库：https://github.com/DongRunCoder/TLAK-assignment 。CI与三平台原生Release均通过；v0.1.0已公开，同tag手动重跑核验并跳过构建也通过。实际链接见README、docs/acceptance.md及evidence/delivery.md。
