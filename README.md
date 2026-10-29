@@ -2,6 +2,8 @@
 
 本地运行的 Anna App 作业。笔记创建、读取和删除走 Anna Host storage；总结走 `anna.tools.invoke → Go Executa → reverse sampling/createMessage`。没有自建 HTTP 后端、浏览器存储兜底或本地规则摘要。
 
+公开仓库：[DongRunCoder/TLAK-assignment](https://github.com/DongRunCoder/TLAK-assignment)。实际验收见 [docs/acceptance.md](docs/acceptance.md)，远程运行结果见 [Actions](https://github.com/DongRunCoder/TLAK-assignment/actions)。
+
 ## 环境与安装
 
 - Node **26 LTS**（本项目验证 26.13.0）；也可用当前测试依赖支持的 24.15+ / 22.22.2+。Node 25 不在支持范围。

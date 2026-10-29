@@ -59,8 +59,10 @@
 
 ## 未执行与交付边界
 
-尚未创建或推送远程仓库；没有运行真实GitHub Actions/Release，没有macOS原生runtime smoke。用户指定公开仓库名 TLAK-assignment、归属 DongRunCoder；远程操作仍需GitHub官方授权。未将账户密码写入工程、脚本或凭据文件。
+已创建并推送公开仓库 https://github.com/DongRunCoder/TLAK-assignment ，最初实现提交为27fc799856ca7af066f6fc656483ff5fd8d3abc9。GitHub使用官方设备授权；未将账户密码写入工程、脚本或凭据文件。
 
-本地实现完成（L1）；最终仓库提交（L2）与真实三平台发布增强验证（V1）仍未完成。详见 evidence/delivery.md。
+另外从此提交的源码zip解压到全新目录，执行 npm ci、32项前端测试、build、strict validate、Go测试、官方mock sampling、8项packaging测试，全部退出0。
+
+本地实现完成（L1）、仓库已提交（L2）；远程CI与真实三平台发布增强验证（V1）正在运行确认中，尚不能把本机交编当作macOS原生测试。详见 evidence/delivery.md。
 
 本轮原始要求文件 SHA-256：E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3。
