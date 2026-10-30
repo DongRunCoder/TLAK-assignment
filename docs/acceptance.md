@@ -2,6 +2,27 @@
 
 基线为 question.md；最终方案给出设计，本文只登记实际执行的检查。使用测试样本，不含真实账号、模型 key、window token。
 
+## 2026-10-30：可选真实 LLM 启动与脱敏实测证据
+
+新增显式 `npm run dev:real`，默认5218、Anna正式站、开发应用slug `mini-notes-tlak-real`。沿用官方CLI和预览生命周期，每次在独立 `.tools/real-preview-*/bundle` 构建一次，以 `--storage legacy --no-watch` 启动。默认dev、原始harness、CI仍为无账号/无模型验收；App、manifest和Executa未改，总结仍通过tools.invoke → Executa → sampling。
+
+真实入口先保护端口，再用官方 `whoami --json` 做本地账号元数据预检。只投影host和过期时间，原始stdout/stderr不回显、不写文件；启动错误仅显示固定分类。help、缺失/损坏/过期凭据和端口占用路径均在构建、开发应用注册之前退出。CLI设备授权、开发者开通和handle选择由用户本人完成，README列出正式命令、代理与排错步骤。
+
+本轮实际退出0的检查：
+
+- 前端124项、安全41项、预览35项（保留原25项，新增真实入口10项）、打包8项；contracts、TypeScript、独立Vite构建及Anna strict validation。
+- 新增测试先观察RED，再通过GREEN；覆盖纯参数与Host参数组装、账号元数据、脱敏分类、help、非法参数、隔离凭据负路径、端口保护和Host提前退出。真实入口测试始终使用空/损坏/过期的临时XDG，不继承开发者账号，不调用服务或模型。
+- 六组独立真实无模型Host回归：watch不重载、多标签页失效检测、手动恢复草稿、恢复后真实Executa路由、Host停机/重启、已提交但丢回执的未知写入隔离。独立bundle和浏览器上下文不操作已有体验会话。
+- Go测试、真实二进制11组双向协议检查、官方独立mock sampling精确fixture比较通过。
+- 正式命令 `npm run dev:real -- --port 5228` 启动成功，GET页面为官方dashboard且含预览适配、HTTP200；没有打开App会话或点击Summarize。Ctrl+C后5228不可达且该启动器/Host进程数为0；原5198、5208、5218仍HTTP200。此烟测证明新入口启动，不声称再次验证付费总结。
+- 另以 `UV_OFFLINE=1` 和空XDG验证固定官方PythonBridge：模拟Node父进程失败退出后，观察到的uvx/Python两个后代均随EOF结束。永久nested fixture同时验证分类与孙进程退出；未添加竞速杀进程或修改官方实现。
+
+[真实模型脱敏报告](../evidence/real-llm-report.json) 来自2026-10-30 14:27:09（北京时间）、源码 `33d824d1e5196ae9dcd21e2a7377fd918eeac092` 的先前人工实测，早于新命令加入：三条测试笔记、一次tools.invoke、Anna mint/complete均200，返回模型 `google/gemini-3-flash-preview`，耗时4975ms，Host/工具/UI摘要124字节且SHA-256一致。原始stdio未录制，反向sampling由固定runtime的Host回调映射及已有协议记录共同支持。公开报告仅保留统计、状态、模型和摘要哈希，排除正文、凭据与账号/窗口标识；本轮没有自动重跑收费请求。
+
+独立规格评审与后续代码质量评审均完成，未发现阻止交付的问题；审阅覆盖所有新增生产代码、测试、文档和公开证据，并对照固定CLI本地实现核对，不读取用户凭据、不请求模型。
+
+question.md SHA-256保持 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`；本轮不改Executa版本或重发历史Release。
+
 ## 2026-10-30：会话失效、草稿恢复与多标签页回归
 
 固定CLI的dashboard每次新建session会关闭上一个session，旧iframe继续使用原ID时收到`transport / [-32602] unknown session_id`。App现在通过真实storage/tools响应观察Host状态，区分检查中、已连接、暂不可用与会话失效；可见页面15秒只读同步及focus/visibility检查复用repository通道。expired锁存，不被迟到成功重置；固定SDK的完整timeout格式也单独识别，一般参数或模型文本不误判。

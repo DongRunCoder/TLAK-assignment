@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "performedAt": "2026-10-30T06:27:09.845Z",
+  "appSourceCommit": "33d824d1e5196ae9dcd21e2a7377fd918eeac092",
+  "annaCliVersion": "0.1.61",
+  "runtimeVersion": "0.2.0a30",
+  "mode": "real",
+  "host": "https://anna.partners",
+  "provenance": "Manual verification with the official CLI and an isolated local launcher, before dev:real was added.",
+  "reproduce": "Follow README optional real LLM setup, save short test notes, and manually click Summarize. Real account quota is used.",
+  "passed": true,
+  "elapsedMs": 4975,
+  "tool": {
+    "id": "mini-notes-summarizer",
+    "method": "summarize",
+    "invocations": 1,
+    "goRunObserved": true
+  },
+  "storage": {
+    "notesWrites": 3,
+    "noteCount": 3
+  },
+  "directIframeLlmCalls": 0,
+  "reverseSampling": {
+    "hostCallback": "host.llm.complete",
+    "observed": true,
+    "mapping": "Pinned runtime maps Executa sampling/createMessage to this Host callback; the UI made no direct LLM call.",
+    "rawStdioRecorded": false,
+    "protocolReference": "evidence/protocol.jsonl"
+  },
+  "model": "google/gemini-3-flash-preview",
+  "remoteRequests": [
+    {
+      "at": "2026-10-30T06:27:07.944Z",
+      "method": "POST",
+      "path": "/api/v1/anna-apps/dev/session/mint",
+      "status": 200
+    },
+    {
+      "at": "2026-10-30T06:27:09.842Z",
+      "method": "POST",
+      "path": "/api/v1/copilot/app/complete",
+      "status": 200
+    }
+  ],
+  "summary": {
+    "bytes": 124,
+    "hostSha256": "0ec1e925fcf3544c615b1919b64efa4eae6c2234c091e4bf13d828385f4b1d11",
+    "toolSha256": "0ec1e925fcf3544c615b1919b64efa4eae6c2234c091e4bf13d828385f4b1d11",
+    "uiSha256": "0ec1e925fcf3544c615b1919b64efa4eae6c2234c091e4bf13d828385f4b1d11",
+    "allMatch": true
+  },
+  "privacy": {
+    "containsNoteOrSummaryText": false,
+    "containsCredentials": false,
+    "containsAccountOrWindowIds": false
+  }
+}

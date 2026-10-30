@@ -1,16 +1,23 @@
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import net from 'node:net';
+import { mkdtemp } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT, annaCommand, environment } from './lib.mjs';
 import { startResponsivePreview } from './responsive-preview.mjs';
+import { REAL_DEFAULT_ACCOUNT, REAL_DEFAULT_APP_SLUG, REAL_STARTUP_MESSAGES, validateRealAccount, validateRealAppSlug, buildPreviewHostArgs, parseRealAccountMetadata, createRealStartupDiagnostics } from './real-mode.mjs';
+export { buildPreviewHostArgs, parseRealAccountMetadata, createRealStartupDiagnostics } from './real-mode.mjs';
 
-export function parsePreviewOptions(argv) {
-  const options = { port: 5198, hostPort: undefined, help: false };
+export function parsePreviewOptions(argv, llm = 'off') {
+  if (!['off', 'real'].includes(llm)) throw new Error('Unsupported preview LLM mode.');
+  const options = { port: llm === 'real' ? 5218 : 5198, hostPort: undefined, help: false };
+  if (llm === 'real') Object.assign(options, { account: REAL_DEFAULT_ACCOUNT, appSlug: REAL_DEFAULT_APP_SLUG });
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     if (flag === '--help' || flag === '-h') { options.help = true; continue; }
+    if (llm === 'real' && flag === '--llm-account') { options.account = validateRealAccount(argv[++i]); continue; }
+    if (llm === 'real' && flag === '--llm-app-slug') { options.appSlug = validateRealAppSlug(argv[++i]); continue; }
     if (flag !== '--port' && flag !== '--host-port') throw new Error('Unsupported preview option.');
     const value = argv[++i];
     if (!/^\d+$/.test(value ?? '') || Number(value) < 1 || Number(value) > 65535) throw new Error('Invalid preview port.');
@@ -51,36 +58,58 @@ function reservePort(port, message) {
 }
 const release = server => new Promise(resolveClose => server.close(resolveClose));
 
-async function waitForHost(port, child, isStopping) {
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    if (isStopping() || child.exitCode !== null || child.signalCode !== null) throw new Error('Official Anna Host stopped during startup.');
-    const ready = await new Promise(resolveReady => {
-      const req = http.get({ hostname: '127.0.0.1', port, path: '/', agent: false }, res => {
-        res.resume();
-        resolveReady(res.statusCode === 200);
-      });
-      req.setTimeout(500, () => req.destroy());
-      req.once('error', () => resolveReady(false));
-    });
-    if (ready) return;
-    await new Promise(resolveDelay => setTimeout(resolveDelay, 150));
+export async function waitForPreviewHost(port, child, isStopping, diagnostics) {
+  // Register before polling: exit and close can both occur during the delay.
+  // Waiting for a new close listener after exit would miss an already-fired event.
+  const closed = new Promise(resolveClose => child.once('close', resolveClose));
+  if (diagnostics) {
+    child.stdout.on('data', chunk => diagnostics.consume(chunk));
+    child.stderr.on('data', chunk => diagnostics.consume(chunk));
   }
-  throw new Error('Official Anna Host startup timed out.');
+  try {
+    const deadline = Date.now() + 30_000;
+    while (Date.now() < deadline) {
+      if (isStopping() || child.exitCode !== null || child.signalCode !== null) throw new Error('Official Anna Host stopped during startup.');
+      const ready = await new Promise(resolveReady => {
+        const req = http.get({ hostname: '127.0.0.1', port, path: '/', agent: false }, res => {
+          res.resume();
+          resolveReady(res.statusCode === 200);
+        });
+        req.setTimeout(500, () => req.destroy());
+        req.once('error', () => resolveReady(false));
+      });
+      if (ready) return;
+      await new Promise(resolveDelay => setTimeout(resolveDelay, 150));
+    }
+    throw new Error('Official Anna Host startup timed out.');
+  } catch (error) {
+    if (diagnostics) {
+      if (child.exitCode !== null || child.signalCode !== null) await closed;
+      throw new Error(diagnostics.message());
+    }
+    throw error;
+  }
 }
 
-export async function runPreview(argv = process.argv.slice(2)) {
-  const { port, hostPort, help } = parsePreviewOptions(argv);
+export async function runPreview(argv = process.argv.slice(2), { llm = 'off' } = {}) {
+  const { port, hostPort, help, account, appSlug } = parsePreviewOptions(argv, llm);
+  const real = llm === 'real';
   if (help) {
-    console.log('Usage: npm run dev:preview -- [--port 5198] [--host-port 5199]\nThe official Anna Host uses an available internal port by default.');
+    console.log(real
+      ? `Usage: npm run dev:real -- [--port 5218] [--host-port <port>] [--llm-account <origin>] [--llm-app-slug <slug>]\nDefaults: ${REAL_DEFAULT_ACCOUNT}, ${REAL_DEFAULT_APP_SLUG}.\nUses the official saved Anna account; builds once in an isolated directory. No model request is sent automatically.`
+      : 'Usage: npm run dev:preview -- [--port 5198] [--host-port 5199]\nThe official Anna Host uses an available internal port by default.');
     return;
   }
   const children = new Set();
   const reservations = new Set();
+  const failedChildren = new WeakSet();
+  const diagnostics = real ? createRealStartupDiagnostics() : undefined;
+  let hostReady = false;
   let preview, stopping = false, stopPromise;
   const stop = (code = 0) => {
     if (stopPromise) return stopPromise;
     stopping = true;
+    diagnostics?.clear();
     process.exitCode = code;
     process.off('SIGINT', onSignal);
     process.off('SIGTERM', onSignal);
@@ -100,17 +129,40 @@ export async function runPreview(argv = process.argv.slice(2)) {
     reservations.add(reservation);
     return reservation;
   }
-  function ownedChild(command, args, persistent = false) {
-    const child = spawn(command, args, { cwd: ROOT, env: environment(), stdio: 'ignore', windowsHide: true, detached: process.platform !== 'win32' });
+  function ownedChild(command, args, persistent = false, capture = false) {
+    const child = spawn(command, args, { cwd: ROOT, env: environment(), stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'ignore', windowsHide: true, detached: process.platform !== 'win32' });
     children.add(child);
     child.on('error', () => {
-      if (persistent && !stopping) { console.error('Preview process unavailable.'); void stop(1); }
+      failedChildren.add(child);
+      if (persistent && !stopping && (!real || hostReady)) { console.error(real ? REAL_STARTUP_MESSAGES.startup : 'Preview process unavailable.'); void stop(1); }
     });
     child.on('exit', () => {
       children.delete(child);
-      if (persistent && !stopping) { console.error('Preview process stopped.'); void stop(1); }
+      if (persistent && !stopping && (!real || hostReady)) { console.error(real ? REAL_STARTUP_MESSAGES.startup : 'Preview process stopped.'); void stop(1); }
     });
     return child;
+  }
+  async function preflightAccount() {
+    const [command, args] = annaCommand(['whoami', '--json']);
+    const child = ownedChild(command, args, false, true);
+    let output = '', size = 0;
+    let timer;
+    try {
+      await new Promise((resolveAccount, reject) => {
+        const fail = () => reject(new Error(REAL_STARTUP_MESSAGES.metadata));
+        timer = setTimeout(() => { fail(); void stopChildTree(child); }, 5000);
+        child.stdout.on('data', chunk => {
+          size += chunk.length;
+          if (size > 1024 * 1024) { fail(); void stopChildTree(child); }
+          else output += chunk.toString('utf8');
+        });
+        // Official error output may contain credential fragments; drain only.
+        child.stderr.resume();
+        child.once('error', fail);
+        child.once('close', code => code === 0 && !stopping ? resolveAccount() : fail());
+      });
+      parseRealAccountMetadata(output, account);
+    } finally { clearTimeout(timer); output = ''; }
   }
   async function build(args) {
     if (stopping) throw new Error('Preview startup stopped.');
@@ -126,28 +178,38 @@ export async function runPreview(argv = process.argv.slice(2)) {
     const hostReservation = await reserveOwned(hostPort ?? 0, 'Official Host port unavailable; choose another --host-port.');
     if (!hostReservation) return;
     const internalPort = hostReservation.address().port;
+    if (real) await preflightAccount();
+    if (stopping) return;
+    const bundle = real ? resolve(await mkdtemp(resolve(ROOT, '.tools/real-preview-')), 'bundle') : './bundle';
+    if (stopping) return;
     console.log('Building Mini Notes for the official Anna Harness…');
     await build([resolve(ROOT, 'node_modules/typescript/bin/tsc'), '--noEmit']);
-    await build([resolve(ROOT, 'node_modules/vite/bin/vite.js'), 'build']);
+    await build([resolve(ROOT, 'node_modules/vite/bin/vite.js'), 'build', ...(real ? ['--outDir', bundle] : [])]);
     if (stopping) return;
     await release(hostReservation);
     reservations.delete(hostReservation);
     if (stopping) return;
-    const [command, args] = annaCommand(['dev', '--no-llm', '--storage', 'legacy', '--bundle', './bundle', '--port', String(internalPort)]);
-    const host = ownedChild(command, args, true);
-    await waitForHost(internalPort, host, () => stopping);
+    const [command, args] = annaCommand(buildPreviewHostArgs({ llm, port: internalPort, bundle, account, appSlug }));
+    const host = ownedChild(command, args, true, real);
+    await waitForPreviewHost(internalPort, host, () => stopping || failedChildren.has(host), diagnostics);
+    hostReady = true;
+    diagnostics?.clear();
     if (stopping) return;
     await release(publicReservation);
     reservations.delete(publicReservation);
     if (stopping) return;
     preview = await startResponsivePreview({ hostPort: internalPort, port });
     if (stopping) { await preview.close(); return; }
-    ownedChild(process.execPath, [resolve(ROOT, 'node_modules/vite/bin/vite.js'), 'build', '--watch'], true);
+    if (!real) ownedChild(process.execPath, [resolve(ROOT, 'node_modules/vite/bin/vite.js'), 'build', '--watch'], true);
     console.log(`Mini Notes responsive preview: http://localhost:${port}/`);
-    console.log('Official Anna Host connected; LLM disabled; legacy storage. Press Ctrl+C to stop.');
+    console.log(real ? 'Official Anna Host connected; real LLM enabled; legacy storage. Model requests may use account quota. Press Ctrl+C to stop.' : 'Official Anna Host connected; LLM disabled; legacy storage. Press Ctrl+C to stop.');
     return { preview, stop };
   } catch (error) {
-    if (!stopping) console.error(error.message.startsWith('Preview') || error.message.startsWith('Official') ? error.message : 'Preview could not start.');
+    if (!stopping) {
+      const safe = [...Object.values(REAL_STARTUP_MESSAGES), 'Preview port unavailable; choose another --port.', 'Official Host port unavailable; choose another --host-port.', 'Preview build could not start.', 'Preview build failed; run npm run build for diagnostics.'].includes(error.message);
+      const offMessage = error.message.startsWith('Preview') || error.message.startsWith('Official') ? error.message : 'Preview could not start.';
+      console.error(real ? (safe ? error.message : REAL_STARTUP_MESSAGES.startup) : offMessage);
+    }
     await stop(stopping ? process.exitCode ?? 0 : 1);
   }
 }

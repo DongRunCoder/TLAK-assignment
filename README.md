@@ -15,7 +15,7 @@ v0.1.1 发布基线已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-
 - Node **26 LTS**（本项目验证 26.13.0）；也可用当前测试依赖支持的 24.15+ / 22.22.2+。Node 25 不在支持范围。
 - Go 1.27.3（构建工具时使用；发布的 binary 不需要 Go）。
 - [uv](https://docs.astral.sh/uv/getting-started/installation/) 与 Python 3.10+（Anna 官方 bridge 的开发依赖）。
-- npm、Git。无需 Anna 账号、`anna-app login`、真实模型 API key 或云数据库。
+- npm、Git。题目默认验收无需 Anna 账号、`anna-app login`、真实模型 API key 或云数据库；可选真实模型体验需要另行授权Anna账号。
 
 ```sh
 npm ci
@@ -67,7 +67,7 @@ npm run dev:harness
 
 validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 `anna-app dev --no-llm --storage legacy --bundle ./bundle`。打开终端打印的 dashboard（默认 [localhost:5180](http://localhost:5180/)），App 在其中 `#app` iframe 运行。不要直接打开 index.html 或用普通 Vite 页面代替 Anna 验收。
 
-开发体验使用 `npm run dev`（或 `npm run dev:preview`），会构建 bundle、启动 watch、启动官方 Anna harness，并在 [localhost:5198](http://localhost:5198/) 提供自适应预览。退出时 Ctrl+C。bundle 修改只重载内层 iframe；外层 dashboard 刷新或重启 dev 可能清空 legacy 内存数据，这是题目允许的生命周期。
+开发体验使用 `npm run dev`（或 `npm run dev:preview`），会构建 bundle、启动 watch、启动官方 Anna harness，并在 [localhost:5198](http://localhost:5198/) 提供自适应预览。退出时 Ctrl+C。预览收到bundle更新后仅提示，不自动重载编辑器；手动刷新外层dashboard或重启dev可能清空legacy内存数据，这是题目允许的生命周期。
 
 自适应预览为官方 dashboard 增加布局 CSS 和手动会话恢复适配：窗口跟随浏览器可用空间，日志栏在窄屏移至下方，调试地址不在工具栏展示。HTTP、WebSocket、Runtime SDK、storage 与 tools 请求仍由真实 Anna harness 处理，不是业务 HTTP 后端或 UI mock。代理固定转发到本机上游，只监听 loopback；官方 CLI 的网络监听行为保持原样。`npm run dev:harness` 保留未经预览层调整的题目验收入口，固定默认尺寸为864×760。
 
@@ -114,6 +114,72 @@ npm run test:session
 ```
 
 该回归脚本复制bundle并启动自己独占的真实Host、预览与浏览器，覆盖两标签页抢占、实际watch更新、Host停机/重启、手动失败/重试和丢写入回执后的隔离，不访问正在体验的5198会话。也可用`-- --bundle /absolute/path/to/bundle`验证独立构建。CI已接入此命令，报告在`.tools/session-recovery-*/report.json`，无正文或会话凭据。
+
+## 可选：通过 Anna Host 体验真实 LLM
+
+默认 `npm run dev`、`dev:preview`、`dev:harness` 与CI继续使用 `--no-llm`。真实模型体验通过单独的 `npm run dev:real` 显式启动，不作为题目验收前置条件，也不使用第三方模型API Key。
+
+### 1. 注册、开通开发者权限并选择 handle
+
+在 [Anna正式站注册](https://anna.partners/register)并[登录](https://anna.partners/login)，然后进入[开发者控制台](https://anna.partners/developer)。如出现“Become a developer”，由账号本人阅读并确认开发者条款、选择自己的公开handle并完成开通。handle是应用命名空间，例如 `@your-handle/mini-notes-tlak-real`，不是GitHub用户名。项目不绑定作者的账号或handle。
+
+### 2. 完成官方 CLI 设备授权
+
+```sh
+node scripts/anna.mjs login --host https://anna.partners --no-browser
+```
+
+打开CLI打印的官方链接，在已登录的Anna网页中核对设备码并由本人批准。凭据由官方CLI保存到用户配置目录；本项目固定的CLI0.1.61使用 `~/.config/anna/credentials.json`，设置 `XDG_CONFIG_HOME` 时位于其 `anna/credentials.json`。不要复制凭据到仓库、前端、聊天或截图。`.env`不会被本启动器加载，模型Key/PAT也不是启动参数。
+
+`node scripts/anna.mjs whoami --json` 可在本机检查账号状态，但其原始输出含凭据预览，不应公开粘贴。启动器仅检查所选host及过期元数据，不回显这段输出。PAT只是开发者授权，模型权限与可用额度仍由Anna服务端检查。
+
+完成CLI授权后，如账号已开通但仍提示缺少handle，可运行以下官方命令（把 `your-handle` 替换为自己的名称；网页中已选定则跳过）：
+
+```sh
+node scripts/anna.mjs account set-handle your-handle --host https://anna.partners
+```
+
+### 3. 启动独立真实模型入口
+
+```sh
+npm run dev:real
+```
+
+默认入口为 [localhost:5218](http://localhost:5218/)，账号host为 `https://anna.partners`，测试用开发应用slug为 `mini-notes-tlak-real`。官方CLI会注册或复用该账号拥有的开发应用。固定CLI0.1.61在不带 `--no-llm` / `--mock-llm` 时即使用真实模式；旧文档的 `--llm real` 不是本版本支持的参数。
+
+此命令构建一次，使用唯一的 `.tools/real-preview-*/bundle`，以 `--storage legacy --no-watch` 启动独立官方Host，并提供同样的自适应预览与草稿恢复。它不会改写默认无模型入口的bundle，也不会关闭占用端口的已有进程。退出时Ctrl+C，仅清理该命令自己创建的服务树。生成的独立bundle是可删除的本地构建缓存，不提交仓库。
+
+可指定其他空闲端口、已授权的Anna环境及自己的开发应用slug：
+
+```sh
+npm run dev:real -- --port 5228 --llm-account https://anna.partners --llm-app-slug mini-notes-tlak-real
+```
+
+`--host-port` 可指定内部Host端口，默认自动选择可用端口。账号只接受服务根地址，不填 `/developers` 或文档中的 `nexus.example.com` 占位地址；HTTP仅用于本机loopback服务。不同host的凭据分别保存，正式站与staging不能只替换URL而省略对应授权。
+
+### 4. 人工验证一次真实总结
+
+启动命令本身不会调用总结。打开新入口、保存几条无敏感信息的测试笔记，再点击 **Summarize**；成功时页面显示Host返回的真实文本。真实请求会使用账号额度，模型选择与计费由Anna处理；项目不固定某个模型，也不自动充值或在失败时生成替代总结。
+
+链路仍为 `Anna iframe → storage Host API → tools.invoke → Go Executa → reverse sampling/createMessage → Anna Host LLM → UI`。前端和Executa都不持有模型Key。请只保留同一个Host的一条活跃体验标签页，多标签页抢占与legacy生命周期见上节。
+
+已完成的一次人工实测见 [evidence/real-llm-report.json](evidence/real-llm-report.json)：2026-10-30，Anna返回 `google/gemini-3-flash-preview`，耗时4975ms；远端mint/complete均HTTP200，Host、工具与UI摘要SHA-256一致。该记录来自正式启动命令加入前的独立官方CLI验证，未伪称本轮重新付费调用；它不保证未来模型名称或响应内容相同。公开报告只有统计、状态、模型名和哈希，无凭据、账号/窗口标识或笔记/摘要正文。原始stdio未被录制，反向sampling证据由固定runtime的Host回调映射与已有[双向协议记录](evidence/protocol.jsonl)共同支持。
+
+### 网络与故障排查
+
+如网络需要代理，在启动CLI的同一终端设置正确的 `HTTPS_PROXY` / `HTTP_PROXY`；本项目推荐的Node26可配合 `NODE_USE_ENV_PROXY=1`。为本机Host保留 `NO_PROXY=localhost,127.0.0.1,::1`。脚本继承当前环境，不写系统代理，不将代理凭据输出到日志。
+
+| 现象 | 处理 |
+| --- | --- |
+| 端口已占用 | 保留已有页面，改用 `--port 5228` 等空闲端口；不要直接重启有草稿的会话 |
+| 没有账号、账号host不匹配或PAT过期 | 对选定host重新运行官方设备授权命令 |
+| `Verified developer required` | 到开发者控制台由本人完成开通，再重试 |
+| `HANDLE_REQUIRED` / developer handle required | 在控制台选择自己的handle，或运行官方 `account set-handle` |
+| 401/403 | 核对授权环境、凭据是否撤销、开发者权限及模型授权；必要时重新登录 |
+| 无法连接Anna或启动超时 | 检查host地址、网络、代理及NO_PROXY；不会自动改为mock |
+| 启动成功但总结失败 | 启动只证明开发应用/Host可用；继续在Anna账号中检查模型权限、额度及平台状态 |
+
+CI只运行离线参数、凭据元数据、启动负路径和原有无模型/mock测试。所有真实账号开通、授权和收费模型请求均由用户人工执行；干净checkout和CI不需要Anna凭据。
 
 ## 后端：官方 mock sampling 单独验证
 

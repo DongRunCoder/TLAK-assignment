@@ -8,5 +8,9 @@ dist/
 playwright-report/
 test-results/
 coverage/
+**/credentials.json
+.env
+.env.*
+!.env.example
 *.log
 !evidence/*.log

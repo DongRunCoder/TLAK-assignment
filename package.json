@@ -9,6 +9,7 @@
     "build:watch": "vite build --watch",
     "dev": "node scripts/dev.mjs",
     "dev:preview": "node scripts/preview.mjs",
+    "dev:real": "node scripts/dev-real.mjs",
     "dev:harness": "node scripts/anna.mjs dev --no-llm --storage legacy --bundle ./bundle",
     "validate": "node scripts/anna.mjs validate --strict --bundle ./bundle",
     "doctor": "node scripts/doctor.mjs",
