@@ -21,6 +21,8 @@
 
 独立规格评审与后续代码质量评审均完成，未发现阻止交付的问题；审阅覆盖所有新增生产代码、测试、文档和公开证据，并对照固定CLI本地实现核对，不读取用户凭据、不请求模型。
 
+代码提交 `a5c7311b214571405e1c9473973c59faee59e6b7` 已推送公开仓库main，[CI 41017968698](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41017968698) 实际 completed/success；已按head_sha核对。Windows job全部步骤均success，包含干净安装、doctor、contracts、前端、安全、预览、构建、strict、Go、真实无模型harness与会话回归、协议、官方mock sampling、打包、native archive及解包smoke、证据上传和post收尾。本段后续提交仅补充CI链接与完成记录，不修改启动器或已验证实现。
+
 question.md SHA-256保持 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`；本轮不改Executa版本或重发历史Release。
 
 ## 2026-10-30：会话失效、草稿恢复与多标签页回归

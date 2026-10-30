@@ -8,6 +8,8 @@ v0.1.1 发布基线已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-
 
 会话失效检测、草稿恢复、多标签页与Host重启回归已通过 [会话恢复完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41010316962)，验证代码提交 `bf4424f7bc430685f06859a601484a442216a387`。新增真实会话测试及脱敏报告上传均成功，详细证据见 [验收记录](docs/acceptance.md)。
 
+可选真实模型入口 `npm run dev:real`、账号预检与独立构建已通过 [真实模式交付完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41017968698)，验证代码提交 `a5c7311b214571405e1c9473973c59faee59e6b7`。CI不使用真实账号或收费模型；真实总结的独立人工实测见 [脱敏报告](evidence/real-llm-report.json)，注册、授权与启动见下文。
+
 历史基线 v0.1.0 已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。当前源码版本为 v0.1.1，新增首次引导、无模型提示和总结安全加固；实际验证记录见验收文档。
 
 ## 环境与安装
