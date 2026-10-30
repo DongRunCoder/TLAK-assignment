@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { RuntimeConnection } from '../notes/useMiniNotes';
 import { useMiniNotes } from '../notes/useMiniNotes';
 import { assertCanAdd, MAX_BODY_BYTES, messageOf, notesBodyBytes, utf8Bytes } from '../notes/model';
@@ -8,6 +9,7 @@ import { UsageGuide } from './UsageGuide';
 
 export function MiniNotesApp({ connection }: { connection: RuntimeConnection }) {
   const app = useMiniNotes(connection);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const { snapshot } = app;
   const ready = app.runtimeStatus === 'ready' && snapshot.status === 'ready';
   const content = app.composer.trim();
@@ -34,8 +36,8 @@ export function MiniNotesApp({ connection }: { connection: RuntimeConnection }) 
     {snapshot.status === 'reconciling' ? <p className="hint">确认前请保留当前页面并使用“重新读取”。如果始终无法确认，可手动结束本次本地会话；重启 dev 会清空 legacy 内存数据。</p> : null}
     <form className="composer" onSubmit={event => { event.preventDefault(); if (ready && validInput) void app.save(); }}>
       <label htmlFor="note-content">笔记内容</label>
-      <textarea id="note-content" aria-label="笔记内容" value={app.composer} onChange={event => app.changeComposer(event.target.value)}
-        readOnly={snapshot.mutation === 'save'} rows={4} placeholder="写下一条简短笔记…" aria-invalid={inputError ? true : undefined}
+      <textarea ref={composerRef} id="note-content" aria-label="笔记内容" value={app.composer} onChange={event => app.changeComposer(event.target.value)}
+        readOnly={snapshot.mutation === 'save'} rows={3} placeholder="写下一条简短笔记…" aria-invalid={inputError ? true : undefined}
         aria-describedby={`composer-limit composer-capacity${inputError ? ' composer-error' : ''}`} />
       <div className="composer-footer"><span id="composer-limit" className="hint">{Array.from(app.composer.trim()).length} / 1000 字符 · 最多 100 条</span><button type="submit" disabled={!ready || !validInput}>保存笔记</button></div>
       {inputError ? <p id="composer-error" role="alert" className="error">{inputError}</p> : null}
@@ -54,6 +56,6 @@ export function MiniNotesApp({ connection }: { connection: RuntimeConnection }) 
           disabled={!ready || !snapshot.notes.length || app.summary.running} aria-busy={app.summary.running}>Summarize</button>
       </section>
     </div>
-    <footer className="app-footer"><p>笔记通过 Anna Host storage 保存；总结由 Executa sampling 返回。</p><UsageGuide runtime={app.anna} /></footer>
+    <footer className="app-footer"><p>笔记通过 Anna Host storage 保存；总结由 Executa sampling 返回。</p><UsageGuide runtime={app.anna} initialFocusRef={composerRef} /></footer>
   </main>;
 }

@@ -60,6 +60,37 @@ describe('Host storage repository', () => {
     await expect(repo.add('retain draft')).rejects.toThrow('write denied');
     expect(repo.getSnapshot().document.notes).toEqual([note()]);
   });
+  it('rejects too_large without retaining a mutation or changing stored notes', async () => {
+    const h = host(doc()); const repo = new NotesRepository(h.runtime); await repo.refresh();
+    h.storage.set.mockRejectedValueOnce(Object.assign(new Error('runtime_state exceeds 262144 bytes SECRET_CANARY'), { code: 'too_large' }));
+    const saving = repo.add('a'.repeat(1000));
+    void saving.catch(() => {});
+    await flush();
+    expect(repo.getSnapshot()).toMatchObject({ status: 'ready', mutation: null, document: doc(), notes: [note()] });
+    await expect(saving).rejects.toThrow('存储空间不足，内容未保存；释放空间后可重试');
+    expect(repo.getSnapshot().error).not.toContain('SECRET_CANARY');
+    expect(h.value()).toEqual(doc());
+    expect(h.storage.get).toHaveBeenCalledTimes(2);
+    expect(h.storage.set).toHaveBeenCalledTimes(1);
+    await repo.refresh();
+    expect(repo.getSnapshot()).toMatchObject({ status: 'ready', mutation: null, document: doc() });
+    expect(h.storage.set).toHaveBeenCalledTimes(1);
+  });
+  it('restores an optimistically hidden note after a too_large rejection', async () => {
+    const h = host(doc()); const repo = new NotesRepository(h.runtime); await repo.refresh();
+    const write = deferred<unknown>(); h.storage.set.mockImplementationOnce(() => write.promise);
+    const deleting = repo.remove(note().id);
+    void deleting.catch(() => {});
+    expect(repo.getSnapshot().notes).toEqual([]);
+    await flush();
+    write.reject(Object.assign(new Error('runtime_state exceeds the storage limit'), { code: 'too_large' }));
+    await flush();
+    expect(repo.getSnapshot()).toMatchObject({ status: 'ready', mutation: null, document: doc(), notes: [note()] });
+    await expect(deleting).rejects.toThrow('存储空间不足，内容未保存；释放空间后可重试');
+    expect(h.value()).toEqual(doc());
+    expect(h.storage.get).toHaveBeenCalledTimes(2);
+    expect(h.storage.set).toHaveBeenCalledTimes(1);
+  });
   it('serializes an old read before deletion and keeps its pending overlay applied', async () => {
     const h = host(doc()); const repo = new NotesRepository(h.runtime); await repo.refresh();
     const oldRead = deferred<{ value: unknown }>(); h.storage.get.mockImplementationOnce(() => oldRead.promise);
@@ -92,6 +123,29 @@ describe('Host storage repository', () => {
     expect(h.storage.set).toHaveBeenCalledTimes(1);
     h.put(expected); await repo.refresh(); await saving;
     expect(repo.getSnapshot().status).toBe('ready');
+    expect(repo.getSnapshot().notes.map(n => n.content)).toEqual(['first', 'late']);
+    expect(h.storage.set).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    ['missing code', undefined], ['unknown code', 'unknown_error'], ['similar code', 'too_large_retry'],
+  ])('keeps a write uncertain with %s despite a quota-like message until its exact commit is read', async (_label, code) => {
+    const h = host(doc()); const repo = new NotesRepository(h.runtime); await repo.refresh();
+    let expected: unknown;
+    const error = Object.assign(new Error('too_large: storage quota exceeded'), code === undefined ? {} : { code });
+    h.storage.set.mockImplementationOnce(async ({ value }) => { expected = value; throw error; });
+    let saved = false; const saving = repo.add('late').then(() => { saved = true; });
+    await flush();
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await repo.refresh();
+      expect(repo.getSnapshot()).toMatchObject({ status: 'reconciling', mutation: 'save', document: doc() });
+      expect(saved).toBe(false);
+    }
+    await expect(repo.add('another')).rejects.toThrow('处理中');
+    await expect(repo.remove(note().id)).rejects.toThrow('处理中');
+    expect(h.storage.set).toHaveBeenCalledTimes(1);
+    h.put(expected); await repo.refresh(); await saving;
+    expect(saved).toBe(true);
+    expect(repo.getSnapshot()).toMatchObject({ status: 'ready', mutation: null });
     expect(repo.getSnapshot().notes.map(n => n.content)).toEqual(['first', 'late']);
     expect(h.storage.set).toHaveBeenCalledTimes(1);
   });

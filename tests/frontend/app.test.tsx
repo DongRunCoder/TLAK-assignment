@@ -1,9 +1,11 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MiniNotesApp } from '../../src/components/MiniNotesApp';
-import { deferred, denied, doc, host, note, notesGetCount } from './helpers';
+import { NotesRepository } from '../../src/notes/repository';
+import { useMiniNotes } from '../../src/notes/useMiniNotes';
+import { deferred, denied, doc, flush, host, note, notesGetCount } from './helpers';
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const boot = async (h = host()) => {
   const connection = { connect: vi.fn().mockResolvedValue(h.runtime) };
   render(<MiniNotesApp connection={connection} />);
@@ -14,6 +16,16 @@ const type = (text: string) => fireEvent.change(screen.getByRole('textbox', { na
 const save = () => fireEvent.click(screen.getByRole('button', { name: '保存笔记' }));
 
 describe('Mini Notes application', () => {
+  it('returns focus to the note composer after the automatic first-use guide closes', async () => {
+    const h = host();
+    const get = h.storage.get.getMockImplementation()!;
+    h.storage.get.mockImplementation(args => args.key === 'mini-notes:onboarding:v1'
+      ? Promise.resolve({ value: null }) : get(args));
+    await boot(h);
+    await screen.findByRole('dialog', { name: '开始使用 Mini Notes' });
+    fireEvent.click(screen.getByRole('button', { name: /^开始(使用|记笔记)/ }));
+    expect(screen.getByRole('textbox', { name: '笔记内容' })).toHaveFocus();
+  });
   it('reads Host storage, creates and immediately deletes while preserving sequence gaps', async () => {
     const h = await boot();
     expect(notesGetCount(h)).toBe(1);
@@ -43,6 +55,31 @@ describe('Mini Notes application', () => {
     expect(screen.getByRole('textbox')).toHaveValue('keep draft');
     expect(screen.getByRole('textbox')).not.toHaveAttribute('readonly');
     expect(screen.getByRole('alert')).toHaveTextContent('write denied');
+  });
+  it('preserves a too_large draft, unlocks editing and clears it only after a successful retry', async () => {
+    const h = await boot(host(doc())); const write = deferred<unknown>();
+    h.storage.set.mockImplementationOnce(() => write.promise);
+    const draft = 'a'.repeat(1000);
+    type(draft); save();
+    expect(screen.getByRole('textbox')).toHaveAttribute('readonly');
+    await act(async () => {
+      write.reject(Object.assign(new Error('runtime_state exceeds 262144 bytes SECRET_CANARY'), { code: 'too_large' }));
+    });
+    expect(screen.getByRole('textbox')).toHaveValue(draft);
+    expect(screen.getByRole('textbox')).not.toHaveAttribute('readonly');
+    expect(screen.getByRole('button', { name: '保存笔记' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '删除笔记 1' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Summarize' })).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('存储空间不足，内容未保存；释放空间后可重试');
+    expect(document.body.textContent).not.toContain('SECRET_CANARY');
+    expect(h.value()).toEqual(doc());
+    expect(notesGetCount(h)).toBe(2); expect(h.storage.set).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('note-2')).not.toBeInTheDocument();
+    save();
+    expect(await screen.findByTestId('note-2')).toHaveTextContent(draft);
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue(''));
+    expect(h.storage.set).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
   it('retains a draft and disables mutation during unknown writes until confirmed', async () => {
     const h = await boot(); let pending: unknown;
@@ -141,6 +178,133 @@ describe('Mini Notes application', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Summarize' }));
     expect(await screen.findByTestId('summary-text')).toHaveTextContent('fresh sampling');
     expect(h.runtime.tools.invoke).toHaveBeenCalledWith(expect.objectContaining({ args: { notes: ['updated on host', 'another'] } }), expect.anything());
+  });
+  it('retains a summary click handed off to an already started background read and refreshes before invoking', async () => {
+    const h = host(doc());
+    let synced!: () => void;
+    h.runtime.on = vi.fn((_event, handler) => { synced = () => handler({}); return () => {}; });
+    h.runtime.tools.invoke = vi.fn().mockResolvedValue({ summary: 'fresh after sync' });
+    const connection = { connect: async () => h.runtime };
+    const { result } = renderHook(() => useMiniNotes(connection));
+    await waitFor(() => expect(result.current.snapshot.status).toBe('ready'));
+    // Capture the callback while the DOM would still show an enabled button.
+    const clickSummary = result.current.summarize;
+    const background = deferred<{ value: unknown }>();
+    const summaryRead = deferred<{ value: unknown }>();
+    h.storage.get.mockImplementationOnce(() => background.promise).mockImplementationOnce(() => summaryRead.promise);
+    await act(async () => { synced(); await flush(); });
+    expect(result.current.snapshot.status).toBe('loading');
+    let operation!: Promise<void>;
+    act(() => { operation = clickSummary(); void clickSummary(); });
+    expect(result.current.summary.running).toBe(true);
+    expect(h.runtime.tools.invoke).not.toHaveBeenCalled();
+    await act(async () => { background.resolve({ value: doc() }); await flush(); });
+    expect(notesGetCount(h)).toBe(3);
+    expect(h.runtime.tools.invoke).not.toHaveBeenCalled();
+    await act(async () => {
+      summaryRead.resolve({ value: doc([note(1, 'latest after queued read')], 2) });
+      await operation;
+    });
+    expect(h.runtime.tools.invoke).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ args: { notes: ['latest after queued read'] } }), expect.anything());
+    expect(result.current.summary).toMatchObject({ status: 'success', running: false, result: { text: 'fresh after sync' } });
+  });
+
+  it('keeps a valid summary response when a same-version background read is still loading', async () => {
+    const h = host(doc());
+    let synced!: () => void;
+    h.runtime.on = vi.fn((_event, handler) => { synced = () => handler({}); return () => {}; });
+    const sampling = deferred<unknown>();
+    h.runtime.tools.invoke = vi.fn(() => sampling.promise);
+    const connection = { connect: async () => h.runtime };
+    const { result } = renderHook(() => useMiniNotes(connection));
+    await waitFor(() => expect(result.current.snapshot.status).toBe('ready'));
+    let operation!: Promise<void>;
+    act(() => { operation = result.current.summarize(); });
+    await waitFor(() => expect(h.runtime.tools.invoke).toHaveBeenCalledTimes(1));
+    const background = deferred<{ value: unknown }>();
+    h.storage.get.mockImplementationOnce(() => background.promise);
+    await act(async () => { synced(); await flush(); });
+    expect(result.current.snapshot.status).toBe('loading');
+    await act(async () => { sampling.resolve({ summary: 'same revision sampling' }); await operation; });
+    expect(result.current.summary).toMatchObject({ status: 'success', running: false, result: { text: 'same revision sampling' } });
+    await act(async () => { background.resolve({ value: doc() }); await flush(); });
+    expect(result.current.summary.status).toBe('success');
+  });
+
+  it('invokes after its own refresh even if a queued same-version sync starts before the await handoff', async () => {
+    const h = host(doc());
+    let synced!: () => void;
+    h.runtime.on = vi.fn((_event, handler) => { synced = () => handler({}); return () => {}; });
+    h.runtime.tools.invoke = vi.fn().mockResolvedValue({ summary: 'queued sync sampling' });
+    const connection = { connect: async () => h.runtime };
+    const { result } = renderHook(() => useMiniNotes(connection));
+    await waitFor(() => expect(result.current.snapshot.status).toBe('ready'));
+    const background = deferred<{ value: unknown }>();
+    h.storage.get.mockResolvedValueOnce({ value: doc() }).mockImplementationOnce(() => background.promise);
+    const refresh = NotesRepository.prototype.refresh;
+    vi.spyOn(NotesRepository.prototype, 'refresh').mockImplementationOnce(async function (this: NotesRepository) {
+      const document = await refresh.call(this);
+      // Keep the real read and queue. Deliver the Host event at the promise
+      // handoff so its sync read starts before the hook resumes after await.
+      synced();
+      await Promise.resolve();
+      return document;
+    });
+    await act(async () => { await result.current.summarize(); });
+    expect(result.current.snapshot.status).toBe('loading');
+    expect(h.runtime.tools.invoke).toHaveBeenCalledTimes(1);
+    expect(result.current.summary).toMatchObject({ status: 'success', running: false });
+    await act(async () => { background.resolve({ value: doc() }); await flush(); });
+  });
+
+  it.each(['mutating', 'reconciling', 'failed', 'empty'] as const)('rejects a stale summary callback while notes are %s', async phase => {
+    const h = host(phase === 'empty' ? doc([], 0, 1) : doc());
+    const connection = { connect: async () => h.runtime };
+    const { result } = renderHook(() => useMiniNotes(connection));
+    await waitFor(() => expect(result.current.snapshot.status).toBe('ready'));
+    const clickSummary = result.current.summarize;
+    const write = deferred<unknown>();
+    let mutation: Promise<void> | undefined;
+    if (phase === 'mutating' || phase === 'reconciling') {
+      h.storage.set.mockImplementationOnce(() => phase === 'mutating' ? write.promise : Promise.reject(new Error('Host RPC timeout')));
+      await act(async () => { mutation = result.current.remove(note().id); await flush(); });
+      expect(result.current.snapshot.status).toBe(phase);
+    } else if (phase === 'failed') {
+      h.storage.get.mockRejectedValueOnce(new Error('Host read failed'));
+      await act(async () => { await result.current.reread(); });
+      expect(result.current.snapshot.status).toBe('failed');
+    }
+    const reads = notesGetCount(h);
+    await act(async () => { await clickSummary(); });
+    expect(h.runtime.tools.invoke).not.toHaveBeenCalled();
+    expect(notesGetCount(h)).toBe(reads);
+    expect(result.current.summary.running).toBe(false);
+    if (phase === 'mutating') await act(async () => { write.reject(denied()); await mutation; });
+  });
+
+  it.each([
+    ['content', doc([note(1, 'changed on Host')])],
+    ['revision', doc([note()], 2)],
+  ])('invalidates a summary when a background read later discovers a changed %s', async (_change, changed) => {
+    const h = host(doc());
+    let synced!: () => void;
+    h.runtime.on = vi.fn((_event, handler) => { synced = () => handler({}); return () => {}; });
+    const sampling = deferred<unknown>();
+    h.runtime.tools.invoke = vi.fn(() => sampling.promise);
+    const connection = { connect: async () => h.runtime };
+    const { result } = renderHook(() => useMiniNotes(connection));
+    await waitFor(() => expect(result.current.snapshot.status).toBe('ready'));
+    let operation!: Promise<void>;
+    act(() => { operation = result.current.summarize(); });
+    await waitFor(() => expect(h.runtime.tools.invoke).toHaveBeenCalledTimes(1));
+    const background = deferred<{ value: unknown }>();
+    h.storage.get.mockImplementationOnce(() => background.promise);
+    await act(async () => { synced(); await flush(); });
+    await act(async () => { sampling.resolve({ summary: 'unchanged until read completes' }); await operation; });
+    await act(async () => { background.resolve({ value: changed }); await flush(); });
+    expect(result.current.summary).toMatchObject({ status: 'stale', running: false });
+    expect(result.current.summary.result).toBeUndefined();
   });
   it('invalidates a displayed summary immediately when deletion starts', async () => {
     const h = host(doc()); h.runtime.tools.invoke = vi.fn().mockResolvedValue({ summary: 'sampled' }); await boot(h);

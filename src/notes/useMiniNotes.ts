@@ -10,6 +10,8 @@ interface SummaryState { status: 'idle' | 'running' | 'success' | 'error' | 'sta
 const idleSnapshot: RepositorySnapshot = { document: EMPTY_DOCUMENT, notes: [], status: 'loading', error: null, mutation: null };
 const idleSubscribe = () => () => {};
 const getIdleSnapshot = () => idleSnapshot;
+const canSummarizeSnapshot = (snapshot: RepositorySnapshot) => !snapshot.mutation && snapshot.notes.length > 0 &&
+  (snapshot.status === 'ready' || snapshot.status === 'loading');
 
 export function useMiniNotes(connection: RuntimeConnection) {
   const [runtimeStatus, setRuntimeStatus] = useState<'connecting' | 'ready' | 'failed'>('connecting');
@@ -85,7 +87,7 @@ export function useMiniNotes(connection: RuntimeConnection) {
     try { await repository.refresh(); } catch { /* Repository owns the visible read error. */ }
   }
   async function summarize() {
-    if (!repository || !runtime.current || summaryInFlight.current || repository.getSnapshot().status !== 'ready') return;
+    if (!repository || !runtime.current || summaryInFlight.current || !canSummarizeSnapshot(repository.getSnapshot())) return;
     summaryInFlight.current = true;
     summaryFingerprint.current = undefined;
     const token = ++summaryToken.current;
@@ -95,16 +97,27 @@ export function useMiniNotes(connection: RuntimeConnection) {
       const document = await repository.refresh();
       expectedFingerprint = documentFingerprint(document);
       summaryFingerprint.current = expectedFingerprint;
-      if (!alive.current || token !== summaryToken.current || repository.getSnapshot().status !== 'ready') return;
+      if (!alive.current) return;
+      // A queued sync may already be reading again. Its loading status keeps
+      // the latest read document valid until a changed fingerprint is observed.
+      const current = repository.getSnapshot();
+      if (token !== summaryToken.current || !canSummarizeSnapshot(current) ||
+          expectedFingerprint !== documentFingerprint(current.document)) {
+        setSummary({ status: 'stale', running: false });
+        return;
+      }
       const result = await summarizeNotes(runtime.current, document);
       if (!alive.current) return;
-      if (token !== summaryToken.current || repository.getSnapshot().status !== 'ready' ||
-          expectedFingerprint !== documentFingerprint(repository.getSnapshot().document)) {
+      const latest = repository.getSnapshot();
+      if (token !== summaryToken.current || !canSummarizeSnapshot(latest) ||
+          expectedFingerprint !== documentFingerprint(latest.document)) {
         setSummary({ status: 'stale', running: false });
       } else setSummary({ status: 'success', running: false, result });
     } catch (error) {
       if (!alive.current) return;
-      if (token !== summaryToken.current || (expectedFingerprint && expectedFingerprint !== documentFingerprint(repository.getSnapshot().document))) {
+      const latest = repository.getSnapshot();
+      if (token !== summaryToken.current || (expectedFingerprint &&
+          (!canSummarizeSnapshot(latest) || expectedFingerprint !== documentFingerprint(latest.document)))) {
         setSummary({ status: 'stale', running: false });
       } else if (error instanceof SummaryRequestError && error.kind === 'no-llm') {
         setSummary({ status: 'no-llm', running: false });

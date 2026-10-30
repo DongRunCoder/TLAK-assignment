@@ -2,6 +2,44 @@
 
 基线为 question.md；最终方案给出设计，本文只登记实际执行的检查。使用测试样本，不含真实账号、模型 key、window token。
 
+## 2026-10-30：容量拒绝恢复与体验入口控件
+
+测试先复现红态：`too_large` 保存后仍为 reconciling、删除后笔记未恢复、App 草稿只读；预览中 Mobile 仍可见。修复只将精确字符串 `too_large` 归类为 Host 明确拒绝，清除 mutation、恢复 ready，并使用固定中文提示。保存失败保留原稿，删除失败恢复列表；无自动重试或数据清理。缺失、未知、相似 code 及 timeout/transport 继续隔离，只有读到精确的待提交版本才确认未知写入。
+
+预览 CSS 隐藏 Mobile、主题、语言及其空容器；Desktop、record 与日志保留。官方 dashboard 文件、Host、SDK、manifest 和 Anna 调用链均未在本轮改动。`npm run dev:harness` 保留官方全部调试控件。渲染回归使用锁定 CLI 的真实 HTML，分别验证原始入口可见和预览入口隐藏，业务链路另由真实 Host 测试验证。
+
+本轮实际退出0：
+
+- `npm test`：82项，新增6项覆盖容量拒绝解锁、草稿保留/重试清空、删除恢复，以及缺失/未知/相似 code 的隔离与迟到提交。
+- `npm run test:preview`：16项，包含2项实际 Edge 渲染可见性回归；HTTP/WS透传、端口与自有进程清理仍通过。
+- `npm run test:security`：41项；`npm run build`、`npm run validate`、`npm run check:contracts`、`git diff --check` 均通过。
+- `node scripts/test-harness.mjs --url http://127.0.0.1:5299/`：官方原始入口，17次真实 Host 调用；再顺序运行5298预览入口，同样流程18次调用。首次引导、关闭焦点/滚动、帮助返回、CRUD、显式重读、SDK hash、真实 tools.invoke、预期 no-llm 提示通过。
+- `npm run test:sampling`：独立官方 `--mock-sampling` runner 精确 fixture 通过，UI中没有伪造总结。
+- 独立实际 Host 容量验证：测试会话额外 key 写入261600字节占位，1000字草稿保存返回真实 `too_large`；Host中的笔记未提交，草稿保持1000字、可编辑、保存可用。通过 Host 释放占位后，同一页面原稿重试保存为序号1，输入才清空；重新读取、删除也通过。
+- 容量恢复与控件可见性的脱敏实际结果保存在 [quota-recovery-report.json](../evidence/quota-recovery-report.json)；永久回归分别在 `tests/frontend/repository.test.ts`、`app.test.tsx` 与 `tests/preview/controls.test.mjs`。报告不包含笔记正文、padding值或会话envelope。
+- 同一个真实页面1280×900、640×800、360×640、360×360，内外层无横向溢出，目标控件隐藏，应用无控制台/运行时错误。Browser插件不可用，使用独立 Playwright / Edge。
+- 预览中的官方 record 按钮实际进入 stop 状态，执行重新读取后停止录制，下载JSONL并在内存解析3行成功；没有将会话载荷保存为公开证据。两次独立只读复核未发现阻塞问题。
+
+本轮为本地验证，Executa与发布脚本未更改，不将历史三平台CI记录视为本轮远端重跑。question.md SHA-256仍为 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
+
+## 2026-10-30：首次关闭修复与自适应预览
+
+真实红态：原始640×614视口，首次关闭引导使scrollY从0跳到358，焦点落到页尾帮助，输入框top=-125。补充失败测试后通过稳定ref与preventScroll修复；真实复验scrollY保持0、焦点回输入框，手动帮助关闭则保留358和原按钮焦点。原单元测试只验证overflow恢复，未覆盖真实浏览器滚动，因此本轮增加立即检查，避免后续locator自动滚动掩盖缺陷。
+
+首层引导现为“开始记笔记”和“验收与模型说明”，准确说明默认无模型行为；技术解释仅展开查看。固定官方入口回退864×760，宽屏800起分栏，短窗压缩字号与间距，全文与容量提示保留。
+
+用户进一步要求随浏览器自适应。新增独立本地布局代理，根dashboard仅注入CSS，SDK、业务HTTP及WebSocket透传给实际Anna。`npm run dev` / `dev:preview` 构建并启动自适应5198入口，`dev:harness`仍为原始官方入口，不修改第三方包或Host权限。
+
+已实际通过：前端76项、安全41项、预览14项（含HTTP原字节/查询、WS双向与拒绝响应、占用端口、自有进程树清理、启动取消释放端口）、构建、contract与strict validate、11组协议及官方mock sampling精确fixture。最终原始Harness真实流程18次Host调用，自适应入口同一流程18次Host调用，均验证storage CRUD、独立guide key、真实tools.invoke与no-llm预期提示。两个写入同名证据的流程最终顺序执行。
+
+真实最终回归另捕获已有总结竞态：重新读取与后台同步交接时，界面仍可点击但repository已进入loading，旧ready guard会无声丢弃请求（实际tools请求数0、summary仍idle）。新增9个回归用例并先红后绿：保留无mutation且非空的ready/loading已读快照，仍串行执行自己的一次Host refresh；调用和返回都验证token与当前fingerprint。同版本后台读取不再误失效；写入中、未确认、读取失败、空笔记及真实revision/content变化继续保护。独立相关45项复核通过，最终两条真实Harness链路均通过。
+
+同一个真实Anna页面连续缩放（未改DOM尺寸）：浏览器1700×1000→App1278×874；1280×900→918×774；1000×800→958×514；640×800→640×610；360×640→360×450；360×360→360×378（外层允许纵滚以保留最小App高度）。各尺寸无水平溢出，测试笔记保持，全程仅1次session/create、1条WebSocket、0应用控制台/运行时错误。窄屏展开引导可滚动，Tab环和Esc/焦点位置验证通过。独立评审未发现实质阻塞。
+
+新增预览的Windows清理测试需允许终止其自身创建的测试进程树；受限sandbox曾拒绝taskkill，同权限复验14项均通过。此处是本轮本地证据，不将下文历史CI/Release链接视作本轮远端验证；Executa源码与历史Release不变，question.md SHA256仍为原值。
+
+最终以 `npm run dev` 启动5198并在应用内浏览器打开，已确认“已同步·0条笔记”、首次关闭后scrollY=0且note-content聚焦。当前面板实际726×534，无水平溢出；页面已保留供用户体验，后续不再创建测试Host会话重置它。
+
 ## v0.1.1：2026-10-30 本地新增功能验收
 
 用户确认采用默认无模型验收，新增可跳过的首次说明、页尾帮助入口、精确 no-llm 提示，以及摘要/错误/权限/证据安全加固。Anna Host 存储与 tools.invoke → Executa → sampling 链路保持。

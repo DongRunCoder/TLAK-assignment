@@ -8,7 +8,9 @@ import { redactEvidence } from './redact-evidence.mjs';
 
 // This drives the actual Anna dashboard/iframe. There is no Host API mock here.
 const p0 = process.argv.includes('--p0');
-const url = process.env.HARNESS_URL ?? 'http://127.0.0.1:5180/';
+const urlArgument = process.argv.indexOf('--url');
+if (urlArgument >= 0 && !process.argv[urlArgument + 1]) throw new Error('Harness --url requires a local dashboard URL.');
+const url = urlArgument >= 0 ? process.argv[urlArgument + 1] : process.env.HARNESS_URL ?? 'http://127.0.0.1:5180/';
 const NOTES_KEY = 'mini-notes:document:v1';
 const GUIDE_KEY = 'mini-notes:onboarding:v1';
 const NO_LLM_ERROR = 'SAMPLING_HOST_ERROR: [-32603] harness started with --no-llm';
@@ -18,6 +20,7 @@ const rpc = [], consoleErrors = [], httpErrors = [], hostWarnings = [];
 const responses = [], responseErrors = [];
 let liveSdkHash;
 let phase = 'load', toolRequestsStarted = 0, toolResponsesFinished = 0, toolStartedAt, toolElapsedMs;
+let firstUseFocusRestored = false, helpScrollPreserved = false, defaultViewport;
 page.on('request', request => {
   if (!request.url().endsWith('/api/session/call')) return;
   const body = request.postDataJSON();
@@ -57,7 +60,8 @@ const evidenceName = p0 ? 'p0' : 'ui';
 const report = passed => ({ url, sourceTest: 'scripts/test-harness.mjs', reproduce: 'npm run verify:harness',
   browser: 'Playwright; Browser plugin not available', actualAnnaHarness: true, passed,
   consoleErrors, httpErrors, hostWarnings, responseErrors, rpcCount: rpc.length, liveSdkHash });
-const publicReport = passed => ({ ...redactEvidence(report(passed)), diagnostics: { phase, toolRequestsStarted, toolResponsesFinished, toolElapsedMs } });
+const publicReport = passed => ({ ...redactEvidence(report(passed)), diagnostics: { phase, toolRequestsStarted, toolResponsesFinished, toolElapsedMs,
+  firstUseFocusRestored, helpScrollPreserved, defaultViewport } });
 try {
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   await app.getByRole('heading', { name: 'Mini Notes', exact: true }).waitFor();
@@ -65,12 +69,38 @@ try {
   phase = 'guide';
   const guide = app.getByRole('dialog', { name: '开始使用 Mini Notes', exact: true });
   await guide.waitFor();
-  await guide.getByRole('button', { name: '开始使用（无需配置模型）', exact: true }).click();
+  const scrollPosition = () => app.locator('body').evaluate(body => body.ownerDocument.defaultView.scrollY);
+  const firstScroll = await scrollPosition();
+  await guide.getByRole('button', { name: '开始记笔记', exact: true }).click();
   await guide.waitFor({ state: 'hidden' });
-  await app.getByRole('button', { name: '使用说明', exact: true }).click();
+  if (!p0) {
+    // Check immediately: locator.fill/click would scroll the composer into view
+    // and hide a broken focus restoration that jumps to the footer.
+    await expect(app.getByRole('textbox', { name: '笔记内容' })).toBeFocused();
+    assert.equal(await scrollPosition(), firstScroll, 'automatic guide dismissal must preserve scroll');
+    firstUseFocusRestored = true;
+    defaultViewport = await app.locator('body').evaluate(body => {
+      const view = body.ownerDocument.defaultView;
+      const notes = body.querySelector('#notes-heading').getBoundingClientRect();
+      const summary = body.querySelector('.summary-action').getBoundingClientRect();
+      return { width: view.innerWidth, height: view.innerHeight,
+        notesHeadingVisible: notes.top >= 0 && notes.bottom <= view.innerHeight,
+        summaryActionVisible: summary.top >= 0 && summary.bottom <= view.innerHeight };
+    });
+    assert(defaultViewport.width >= 800 && defaultViewport.height >= 600,
+      'desktop harness must provide the approved first-viewport dimensions');
+    assert(defaultViewport.notesHeadingVisible, 'default first viewport must show the notes section');
+    assert(defaultViewport.summaryActionVisible, 'default first viewport must show the summary action');
+  }
+  const help = app.getByRole('button', { name: '使用说明', exact: true });
+  await help.click();
   await guide.waitFor();
+  const helpScroll = await scrollPosition();
   await guide.press('Escape');
   await guide.waitFor({ state: 'hidden' });
+  await expect(help).toBeFocused();
+  assert.equal(await scrollPosition(), helpScroll, 'manual help dismissal must preserve scroll');
+  helpScrollPreserved = true;
   if (p0) {
     await app.getByRole('button', { name: '验证平台契约' }).click();
     await app.getByTestId('p0-result').filter({ hasText: 'P0 storage verified' }).waitFor();

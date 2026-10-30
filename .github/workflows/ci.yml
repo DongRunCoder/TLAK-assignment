@@ -39,6 +39,7 @@ jobs:
       - run: npm run check:contracts
       - run: npm test
       - run: npm run test:security
+      - run: npm run test:preview
       - run: npm run build
       - run: npm run validate
       - run: npm run test:go

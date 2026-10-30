@@ -20,6 +20,14 @@
     "phase": "complete",
     "toolRequestsStarted": 1,
     "toolResponsesFinished": 1,
-    "toolElapsedMs": 14862
+    "toolElapsedMs": 6,
+    "firstUseFocusRestored": true,
+    "helpScrollPreserved": true,
+    "defaultViewport": {
+      "width": 918,
+      "height": 774,
+      "notesHeadingVisible": true,
+      "summaryActionVisible": true
+    }
   }
 }

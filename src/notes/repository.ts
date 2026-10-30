@@ -19,10 +19,10 @@ interface Mutation {
 // Only explicit Host rejections prove that a write did not commit. A timeout,
 // transport loss or unclassified internal error must keep the write isolated.
 const rejectedCodes = new Set(['permission_denied', 'invalid_arg', 'invalid_params', 'invalid_arguments',
-  'quota_exceeded', 'storage_quota_exceeded', 'not_found', 'method_not_found', 'unauthorized', 'forbidden',
+  'quota_exceeded', 'storage_quota_exceeded', 'too_large', 'not_found', 'method_not_found', 'unauthorized', 'forbidden',
   'storage_permission_denied', 'storage_invalid_arg']);
-function isRejectedWrite(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && rejectedCodes.has(String(error.code));
+function isRejectedWrite(error: unknown): error is { code: string } {
+  return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' && rejectedCodes.has(error.code);
 }
 
 export class NotesRepository {
@@ -141,7 +141,9 @@ export class NotesRepository {
         if (documentFingerprint(next) !== documentFingerprint(current)) {
           try { await this.runtime.storage.set({ key: NOTES_KEY, value: next }); }
           catch (error) {
-            if (isRejectedWrite(error)) throw error;
+            if (isRejectedWrite(error)) {
+              throw error.code === 'too_large' ? new Error('存储空间不足，内容未保存；释放空间后可重试') : error;
+            }
             mutation.expected = next;
             const completion = new Promise<void>(resolve => { mutation.confirmed = resolve; });
             this.publish({ status: 'reconciling', error: `正在确认${mutation.kind === 'save' ? '保存' : '删除'}结果：${messageOf(error)}。请重新读取；在结果确认前暂停新增、删除和总结。` });

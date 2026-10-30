@@ -1,4 +1,5 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { createRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AnnaRuntime } from '../../src/anna/types';
 import { UsageGuide } from '../../src/components/UsageGuide';
@@ -6,7 +7,7 @@ import { UsageGuide } from '../../src/components/UsageGuide';
 const GUIDE_KEY = 'mini-notes:onboarding:v1';
 const SEEN = { schemaVersion: 1, seenGuideVersion: 1 };
 const TITLE = '开始使用 Mini Notes';
-const PRIMARY = '开始使用（无需配置模型）';
+const PRIMARY = '开始记笔记';
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -42,6 +43,41 @@ afterEach(() => {
 });
 
 describe('independent usage guide', () => {
+  it('focuses the provided note input without scrolling after the first automatic guide closes', async () => {
+    const h = guideHost();
+    const initialFocusRef = createRef<HTMLTextAreaElement>();
+    render(<><textarea ref={initialFocusRef} aria-label="笔记草稿" /><UsageGuide runtime={h.runtime} initialFocusRef={initialFocusRef} /></>);
+    const dialog = await screen.findByRole('dialog', { name: TITLE });
+    const input = screen.getByRole('textbox', { name: '笔记草稿' });
+    const focus = vi.spyOn(input, 'focus');
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+
+    fireEvent.click(within(dialog).getByRole('button', { name: PRIMARY }));
+
+    expect(input).toHaveFocus();
+    expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it('restores the manual help opener without scrolling or replacing it with the note input', async () => {
+    const h = guideHost(SEEN);
+    const initialFocusRef = createRef<HTMLTextAreaElement>();
+    render(<><textarea ref={initialFocusRef} aria-label="笔记草稿" /><UsageGuide runtime={h.runtime} initialFocusRef={initialFocusRef} /></>);
+    await flush();
+    const help = screen.getByRole('button', { name: '使用说明' });
+    help.focus();
+    fireEvent.click(help);
+    const focus = vi.spyOn(help, 'focus');
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(help).toHaveFocus();
+    expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
+    expect(scroll).not.toHaveBeenCalled();
+    expect(screen.getByRole('textbox', { name: '笔记草稿' })).not.toHaveFocus();
+  });
+
   it('opens for a missing Host marker and immediately dismisses before saving its own versioned key', async () => {
     const h = guideHost();
     const localGet = vi.spyOn(Storage.prototype, 'getItem');
@@ -115,23 +151,41 @@ describe('independent usage guide', () => {
     expect(h.storage.set).toHaveBeenCalledExactlyOnceWith({ key: GUIDE_KEY, value: SEEN });
   });
 
-  it('explains the default no-llm mode and keeps the two acceptance paths independent', async () => {
+  it('keeps the first-use guide focused on notes and the expected no-model summary notice', async () => {
     const h = guideHost();
     render(<UsageGuide runtime={h.runtime} />);
     const dialog = await screen.findByRole('dialog', { name: TITLE });
-    expect(dialog).toHaveTextContent('无需账号');
+    expect(dialog).toHaveTextContent('笔记无需配置即可使用');
+    expect(dialog).toHaveTextContent('按项目默认的无模型验收方式启动时，总结会显示预期提示，不会生成真实总结');
+    expect(within(dialog).getByRole('button', { name: PRIMARY })).toHaveFocus();
+    const details = within(dialog).getByRole('button', { name: '验收与模型说明' });
+    expect(details).toHaveAttribute('aria-expanded', 'false');
+    expect(dialog).not.toHaveTextContent('Host');
+    expect(dialog).not.toHaveTextContent('API Key');
+    expect(dialog).not.toHaveTextContent('--no-llm');
+    expect(within(dialog).queryByText('npm run test:harness')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('npm run test:sampling')).not.toBeInTheDocument();
+    expect(h.runtime.tools.invoke).not.toHaveBeenCalled();
+  });
+
+  it('explains optional Host models and both independent acceptance paths in the expanded guide', async () => {
+    const h = guideHost();
+    render(<UsageGuide runtime={h.runtime} />);
+    const dialog = await screen.findByRole('dialog', { name: TITLE });
+    const details = within(dialog).getByRole('button', { name: '验收与模型说明' });
+    fireEvent.click(details);
+    expect(details).toHaveAttribute('aria-expanded', 'true');
     expect(dialog).toHaveTextContent('--no-llm');
     expect(dialog).toHaveTextContent('不会检测或修改 Host 配置');
     expect(dialog).toHaveTextContent('不收集 API Key');
-    const details = within(dialog).getByRole('button', { name: '查看验收说明' });
-    expect(details).toHaveAttribute('aria-expanded', 'false');
-    expect(within(dialog).queryByText('npm run test:sampling')).not.toBeInTheDocument();
-    fireEvent.click(details);
-    expect(details).toHaveAttribute('aria-expanded', 'true');
+    expect(dialog).toHaveTextContent('真实模型可由 Host 另行配置');
     expect(within(dialog).getByText('npm run test:harness')).toBeVisible();
     expect(within(dialog).getByText('npm run test:sampling')).toBeVisible();
     expect(dialog).toHaveTextContent('官方 mock sampling');
-    expect(dialog).toHaveTextContent('真实模型');
+    expect(dialog).toHaveTextContent('独立运行，不会切换当前 Host 配置');
+    fireEvent.click(details);
+    expect(details).toHaveAttribute('aria-expanded', 'false');
+    expect(within(dialog).queryByText('npm run test:sampling')).not.toBeInTheDocument();
     expect(h.runtime.tools.invoke).not.toHaveBeenCalled();
   });
 
@@ -290,7 +344,7 @@ describe('independent usage guide', () => {
     help.focus(); fireEvent.click(help);
     const dialog = screen.getByRole('dialog', { name: TITLE });
     const first = within(dialog).getByRole('button', { name: '关闭使用说明' });
-    const last = within(dialog).getByRole('button', { name: '查看验收说明' });
+    const last = within(dialog).getByRole('button', { name: '验收与模型说明' });
     expect(within(dialog).getByRole('button', { name: PRIMARY })).toHaveFocus();
     expect(document.body.style.overflow).toBe('hidden');
     last.focus(); fireEvent.keyDown(last, { key: 'Tab' });

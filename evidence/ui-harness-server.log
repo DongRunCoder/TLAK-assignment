@@ -4,9 +4,6 @@ anna-app dev
   runtime           uvx anna-app-runtime-local@0.2.0a30
   browser sdk       npm @anna-ai/app-runtime
   spawning python bridge…
-[bridge] Downloading pydantic-core (2.1MiB)
-[bridge]  Downloaded pydantic-core
-[bridge] Installed 11 packages in 282ms
   ✓ bridge ready
   executas          mini-notes-summarizer
   llm bridge        disabled (--no-llm)

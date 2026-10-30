@@ -4,7 +4,7 @@
 
 公开仓库：[DongRunCoder/TLAK-assignment](https://github.com/DongRunCoder/TLAK-assignment)。实际验收见 [docs/acceptance.md](docs/acceptance.md)，远程运行结果见 [Actions](https://github.com/DongRunCoder/TLAK-assignment/actions)。
 
-v0.1.1 已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40919015848)、[三平台原生构建与发布](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)、[Release 下载](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1)。
+v0.1.1 发布基线已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40919015848)、[三平台原生构建与发布](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)、[Release 下载](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1)。本次界面、自适应预览和读取交接改进的本地验收见 [验收记录](docs/acceptance.md)，历史链接不代表这些新增改动已运行远端CI。
 
 历史基线 v0.1.0 已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。当前源码版本为 v0.1.1，新增首次引导、无模型提示和总结安全加固；实际验证记录见验收文档。
 
@@ -65,9 +65,13 @@ npm run dev:harness
 
 validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 `anna-app dev --no-llm --storage legacy --bundle ./bundle`。打开终端打印的 dashboard（默认 [localhost:5180](http://localhost:5180/)），App 在其中 `#app` iframe 运行。不要直接打开 index.html 或用普通 Vite 页面代替 Anna 验收。
 
-开发时也可用 `npm run dev` 运行构建 watch 与 Anna harness。退出时 Ctrl+C。bundle 修改只重载内层 iframe；外层 dashboard 刷新或重启 dev 可能清空 legacy 内存数据，这是题目允许的生命周期。
+开发体验使用 `npm run dev`（或 `npm run dev:preview`），会构建 bundle、启动 watch、启动官方 Anna harness，并在 [localhost:5198](http://localhost:5198/) 提供自适应预览。退出时 Ctrl+C。bundle 修改只重载内层 iframe；外层 dashboard 刷新或重启 dev 可能清空 legacy 内存数据，这是题目允许的生命周期。
 
-首次连接后会显示“开始使用 Mini Notes”说明，可点击“开始使用（无需配置模型）”、关闭或按 Esc 继续。页尾“使用说明”可随时重新打开，展开查看两条独立验收路径。弹窗不安装依赖、不收集凭据，也不检测或修改 Host 的模型配置。
+自适应预览仅为官方 dashboard 增加布局 CSS：窗口跟随浏览器可用空间，日志栏在窄屏移至下方，调试地址不在工具栏展示。HTTP、WebSocket、Runtime SDK、storage 与 tools 请求仍由真实 Anna harness 处理，不是业务 HTTP 后端或 UI mock。代理固定转发到本机上游，只监听 loopback；官方 CLI 的网络监听行为保持原样。`npm run dev:harness` 保留未经预览层调整的题目验收入口，固定默认尺寸为864×760。
+
+体验入口隐藏 Mobile、主题和语言切换：Mini Notes 目前采用自适应的浅色中文界面，没有实现这些切换功能。Desktop 和 record 保留；需要查看官方完整调试控件时使用 `npm run dev:harness`。隐藏规则仅注入预览层，不修改官方 dashboard 文件、App manifest 或 Anna Runtime。
+
+首次连接后会显示“开始使用 Mini Notes”说明，可点击“开始记笔记”、关闭或按 Esc 继续。首次自动引导关闭后焦点回到输入框并保持滚动位置；从页尾“使用说明”手动打开后，关闭会恢复原焦点。首层明确默认无模型验收不会生成真实总结，“验收与模型说明”展开两条独立验收路径。弹窗不安装依赖、不收集凭据，也不检测或修改 Host 的模型配置。
 
 引导标记保存在独立的 Anna storage key `mini-notes:onboarding:v1`，与笔记 key `mini-notes:document:v1` 分离。引导读写各最多等待 2 秒，失败或未知版本不覆盖原值，也不会锁住笔记。legacy 外层会话重置后，引导允许重新出现。
 
@@ -89,6 +93,8 @@ validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 
 UI 仅在真实收到上述明确错误后显示“当前为无模型验收模式”、独立 sampling 命令及可展开的 Host 返回详情；其他 `-32603`、权限或超时错误仍按失败处理，不会误报验收通过。Summarize 仍可重试，不依据引导选择关闭工具调用。
 
 可自动驱动同一真实流程：保持 harness 运行，在另一终端执行 `npm run test:harness`。本机使用独立无头 Edge，不读取个人浏览器资料；Linux CI 使用 `PLAYWRIGHT_CHANNEL=chromium` 和 `npx playwright install --with-deps chromium`。截图只保存 App，不保存带临时 window token 的 dashboard 地址栏。
+
+上面的测试默认连接原始5180入口。验证自适应5198入口时运行 `npm run test:harness -- --url http://localhost:5198/`；也可设置 `HARNESS_URL`。两者执行同一组真实storage/tools断言，预览层没有替代Host实现。
 
 ## 后端：官方 mock sampling 单独验证
 
@@ -199,6 +205,8 @@ release-metadata.json
 ## 状态与限制
 
 固定序号递增，删除后允许缺口；相同内容可保存多条。数据有版本且严格校验，读取失败不能当空文档覆盖。明确写入失败保留输入或回滚；超时等结果未知时进入确认隔离，重新读取只确认，不强制解锁；重连也不能证明旧写入取消。最后已知笔记仍可见，结束 legacy 会话前明确提示数据会重置。
+
+固定版本 Host 的 `too_large` 是提交前的容量拒绝。收到这个精确错误码时，页面显示“存储空间不足，内容未保存；释放空间后可重试”，保留草稿并恢复编辑和操作；释放空间或缩短草稿后可手动重试，成功才清空输入。Host 限制的是整个 runtime_state，其他 key 也会占用空间，所以 App 自身的正文限额不能替代 Host 检查。不会自动清除数据或重复写入；没有明确错误码、仅消息含容量字样、超时或断连仍按未知写入保护。
 
 单条最多1,000个Unicode code point、最多100条、所有正文UTF-8字节和≤24,576、文档≤192KiB；保存前提示，合法已保存列表都可发起完整总结。summary仅在当前UI保留，笔记变化后旧结果失效，不把迟到结果套到新列表。单实例队列不声称解决多窗口协同。
 

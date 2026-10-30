@@ -1,0 +1,159 @@
+{
+  "browser": "Edge via Playwright; Browser plugin not available",
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 900,
+      "noHorizontalOverflow": true
+    },
+    {
+      "width": 640,
+      "height": 800,
+      "noHorizontalOverflow": true
+    },
+    {
+      "width": 360,
+      "height": 640,
+      "noHorizontalOverflow": true
+    },
+    {
+      "width": 360,
+      "height": 360,
+      "noHorizontalOverflow": true
+    }
+  ],
+  "rawControlsRetained": true,
+  "previewControlsHidden": true,
+  "rejected": {
+    "draftLength": 1000,
+    "editable": true,
+    "saveEnabled": true,
+    "storedNotes": 0
+  },
+  "retry": {
+    "storedNotes": 1,
+    "sequence": 1,
+    "draftCleared": true
+  },
+  "consoleErrors": [],
+  "rpc": [
+    {
+      "ns": "window",
+      "method": "hello",
+      "ok": true
+    },
+    {
+      "ns": "window",
+      "method": "ready",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:onboarding:v1",
+      "ok": true
+    },
+    {
+      "ns": "window",
+      "method": "hello",
+      "ok": true
+    },
+    {
+      "ns": "window",
+      "method": "ready",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:onboarding:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "set",
+      "key": "mini-notes:onboarding:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "set",
+      "key": "mini-notes:document:v1",
+      "ok": false,
+      "errorCode": "too_large"
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "set",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "set",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    },
+    {
+      "ns": "storage",
+      "method": "get",
+      "key": "mini-notes:document:v1",
+      "ok": true
+    }
+  ],
+  "passed": true
+}
