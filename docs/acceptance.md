@@ -20,7 +20,9 @@
 - 同一个真实页面1280×900、640×800、360×640、360×360，内外层无横向溢出，目标控件隐藏，应用无控制台/运行时错误。Browser插件不可用，使用独立 Playwright / Edge。
 - 预览中的官方 record 按钮实际进入 stop 状态，执行重新读取后停止录制，下载JSONL并在内存解析3行成功；没有将会话载荷保存为公开证据。两次独立只读复核未发现阻塞问题。
 
-本轮为本地验证，Executa与发布脚本未更改，不将历史三平台CI记录视为本轮远端重跑。question.md SHA-256仍为 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
+本轮代码提交 `2c5257aaa707ec1d1c56a1eae9889fe6dd44c333` 已推送公开仓库 main，[CI 41002904092](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41002904092) 实际 completed/success，Windows job及其全部步骤均为success：干净安装、doctor、contracts、82项前端、41项安全、16项预览、构建、strict validate、Go、真实Harness、11组协议、官方mock sampling、8项打包测试、native打包、解包后协议smoke及证据上传。已按精确head_sha关联查询，不使用历史成功结果代替本轮验证。本段后续提交仅补充README与验收记录。
+
+Executa与发布脚本未更改，本轮未重发三平台Release；历史三平台发布证明仍对应原tag源码。question.md SHA-256仍为 `E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
 
 ## 2026-10-30：首次关闭修复与自适应预览
 
