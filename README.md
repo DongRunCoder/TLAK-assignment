@@ -6,6 +6,8 @@
 
 v0.1.1 发布基线已通过：[完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40919015848)、[三平台原生构建与发布](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40916741097)、[Release 下载](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.1)。本次界面、自适应预览、读取交接与容量恢复改进已通过 [本轮完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41002904092)，验证代码提交 `2c5257aaa707ec1d1c56a1eae9889fe6dd44c333`；本地及远端结果见 [验收记录](docs/acceptance.md)。
 
+会话失效检测、草稿恢复、多标签页与Host重启回归已通过 [会话恢复完整 CI](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41010316962)，验证代码提交 `bf4424f7bc430685f06859a601484a442216a387`。新增真实会话测试及脱敏报告上传均成功，详细证据见 [验收记录](docs/acceptance.md)。
+
 历史基线 v0.1.0 已验证：[CI 通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795605)、[三平台原生构建与发布通过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40893795409)、[v0.1.0 Release](https://github.com/DongRunCoder/TLAK-assignment/releases/tag/v0.1.0)、[同 tag 手动重跑安全跳过](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/40894532469)。当前源码版本为 v0.1.1，新增首次引导、无模型提示和总结安全加固；实际验证记录见验收文档。
 
 ## 环境与安装

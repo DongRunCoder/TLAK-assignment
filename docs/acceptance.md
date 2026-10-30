@@ -19,7 +19,9 @@
 - 最终独立bundle的原始官方入口真实Harness20次Host调用，预览入口18次；CRUD、序号、显式重读、引导关闭焦点/滚动、SDK hash、真实tools.invoke与无模型提示通过。官方独立mock sampling精确fixture通过。
 - Playwright/Edge真实1280×900、360×640验证：失效状态准确、恢复操作可见、草稿完整、无横向溢出；人工恢复后返回绿色已连接且输入仍为原稿。Browser插件不可用，IAB用于最后打开体验。
 
-为保护旧5198页面草稿，本轮使用独立bundle与新5208入口，不刷新旧页；最终体验服务使用`--no-llm --storage legacy`。新会话中的旧笔记仍不保证保留。CI配置已加入`npm run test:session`并上传脱敏报告，本轮尚未提交/推送或运行远端CI；下文历史CI链接不能代替本轮结果。
+为保护旧5198页面草稿，本轮使用独立bundle与新5208入口，不刷新旧页；最终体验服务使用`--no-llm --storage legacy`。新会话中的旧笔记仍不保证保留。CI配置已加入`npm run test:session`并上传脱敏报告。
+
+代码提交 `bf4424f7bc430685f06859a601484a442216a387` 已推送公开仓库main，[CI 41010316962](https://github.com/DongRunCoder/TLAK-assignment/actions/runs/41010316962) 实际 completed/success。Windows job及全部步骤均为success：依赖干净安装、doctor、contracts、前端124项、安全41项、预览25项、构建、strict validate、Go、真实Harness、新增六组真实会话回归、协议、独立官方mock sampling、打包测试、Windows native打包、解包smoke与证据上传。已核对运行head_sha精确对应本轮源码，未使用历史成功替代本轮验证；本段后续提交仅补充README与验收记录，未改实现或发布旧Release。
 
 question.md SHA-256：`E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
 
