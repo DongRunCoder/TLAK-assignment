@@ -1,4 +1,5 @@
 import type { AnnaRuntime } from '../anna/types';
+import { classifySessionError, HostOperationBlockedError } from '../anna/session';
 import { assertCanAdd, documentFingerprint, EMPTY_DOCUMENT, messageOf, parseDocument, type NotesDocument, type Note } from './model';
 
 export const NOTES_KEY = 'mini-notes:document:v1';
@@ -22,6 +23,8 @@ const rejectedCodes = new Set(['permission_denied', 'invalid_arg', 'invalid_para
   'quota_exceeded', 'storage_quota_exceeded', 'too_large', 'not_found', 'method_not_found', 'unauthorized', 'forbidden',
   'storage_permission_denied', 'storage_invalid_arg']);
 function isRejectedWrite(error: unknown): error is { code: string } {
+  if (error instanceof HostOperationBlockedError) return true;
+  if (classifySessionError(error)) return false;
   return typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string' && rejectedCodes.has(error.code);
 }
 

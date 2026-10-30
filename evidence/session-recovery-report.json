@@ -1,0 +1,13 @@
+{
+  "actualAnnaHarness": true,
+  "browser": "Playwright; Browser plugin not available",
+  "checks": [
+    "real Host watch update preserves the existing editor",
+    "two tabs detect expiry without navigation or automatic writes",
+    "manual new session restores draft and waits for explicit save",
+    "recovered SDK keeps the real Executa sampling route",
+    "Host restart and failed recovery preserve draft without replay",
+    "unknown committed write stays isolated even after session loss"
+  ],
+  "passed": true
+}

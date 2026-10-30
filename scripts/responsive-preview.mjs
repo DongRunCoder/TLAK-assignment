@@ -1,5 +1,6 @@
 import http from 'node:http';
 import net from 'node:net';
+import { PREVIEW_RECOVERY_SCRIPT, PREVIEW_PRESERVE_SCRIPT } from './preview-recovery.mjs';
 
 // Development chrome only. The official dashboard, SDK and App payloads remain
 // upstream-owned. Never accept an upstream URL or a non-loopback bind address.
@@ -38,6 +39,7 @@ main { padding: 20px; align-items: center; }
   content: 'Mini Notes · 自适应预览'; margin-left: auto;
   min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 11px;
 }
+#frame[data-update-pending] .titlebar::after { content: '有更新 · 请先保留草稿，再手动刷新'; }
 aside { overflow: auto; overflow-wrap: anywhere; }
 @media (max-width: 1100px) {
   body {
@@ -101,7 +103,9 @@ function forwardResponse(req, res, upstream) {
     if (streaming || res.destroyed) return;
     const original = Buffer.concat(chunks);
     const source = original.toString('utf8');
-    const updated = source.includes('id="mini-notes-responsive-preview"') ? source : source.replace(/<\/head\s*>/i, `${STYLE}</head>`);
+    let updated = source.includes('id="mini-notes-responsive-preview"') ? source : source.replace(/<\/head\s*>/i, `${STYLE}</head>`);
+    if (!updated.includes('id="mini-notes-preserve-editor"')) updated = updated.replace(/<\/head\s*>/i, `${PREVIEW_PRESERVE_SCRIPT}</head>`);
+    if (!updated.includes('id="mini-notes-session-recovery"')) updated = updated.replace(/<\/body\s*>/i, `${PREVIEW_RECOVERY_SCRIPT}</body>`);
     if (source === updated) { writeResponse(res, upstream); res.end(original); return; }
     const headers = [];
     for (let i = 0; i < upstream.rawHeaders.length; i += 2) {

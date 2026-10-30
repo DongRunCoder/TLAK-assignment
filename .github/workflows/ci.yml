@@ -44,6 +44,7 @@ jobs:
       - run: npm run validate
       - run: npm run test:go
       - run: npm run verify:harness
+      - run: npm run test:session
       - run: npm run test:protocol
       - run: npm run test:sampling
       - run: npm run test:packaging
@@ -58,6 +59,7 @@ jobs:
             evidence/
             dist/
             .tools/archive-smoke-*/protocol*.json*
+            .tools/session-recovery-*/report.json
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14

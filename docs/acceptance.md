@@ -2,6 +2,27 @@
 
 基线为 question.md；最终方案给出设计，本文只登记实际执行的检查。使用测试样本，不含真实账号、模型 key、window token。
 
+## 2026-10-30：会话失效、草稿恢复与多标签页回归
+
+固定CLI的dashboard每次新建session会关闭上一个session，旧iframe继续使用原ID时收到`transport / [-32602] unknown session_id`。App现在通过真实storage/tools响应观察Host状态，区分检查中、已连接、暂不可用与会话失效；可见页面15秒只读同步及focus/visibility检查复用repository通道。expired锁存，不被迟到成功重置；固定SDK的完整timeout格式也单独识别，一般参数或模型文本不误判。
+
+用户手动点击“保留草稿并恢复会话”后，独立预览外壳通过官方session/create重建，再将内存草稿交给新的Anna iframe；React确认输入框提交后才ACK并清缓存。业务UI无fetch、浏览器持久化或自动写入重放。origin/source/documentId/requestId/结构/长度均验证，错误固定脱敏。原始官方入口保留完整调试控件，提供复制与手动重新打开说明。
+
+写入未派发的本地sentinel可解除本次mutation；真正派发后的session丢失、transport与timeout仍保持未知写入隔离。存在mutation、待取回草稿或恢复中，不可用新会话绕过保护。已发送保存若在失效后迟到成功，也保留编辑器草稿。交还遇到新输入或未知mutation，保留当前输入和待取回草稿，明确显示人工“取回恢复草稿”，不覆盖、不提前ACK。
+
+独立评审发现并通过先红后绿的回归关闭：迟到session响应可能重载新编辑器、未ACK草稿无法交还、实际SDK timeout格式未匹配，以及初始官方watch自动重载。预览现在在官方脚本前安装窄WebSocket适配，仅拦截同源`/ws`的reload并提示手动处理，其余事件与其他socket不改。官方文件、SDK、manifest、Executa源码与question.md不改。
+
+本轮实际通过：
+
+- 前端124项（原82项保留，新增42项）、安全41项、预览25项（原16项与9项恢复/事件回归）、TypeScript与独立Vite构建、Anna strict validate、contracts、diff空白检查。
+- 独立真实Host `npm run test:session -- --bundle .tmp/session-recovery/bundle` 六组：真实watch更新不重载；两个标签页抢占只检测不自动create；手动重建交还原稿且只在点击保存后写入；恢复后真实Executa reverse sampling路由收到预期no-llm；Host停机、恢复失败及重启均保留原稿；真实提交后丢ACK/阻断读，再关闭旧会话，仍reconciling且恢复禁用。过程只丢传输回执，不伪造Host数据或总结。脱敏结果见 [session-recovery-report.json](../evidence/session-recovery-report.json)。
+- 最终独立bundle的原始官方入口真实Harness20次Host调用，预览入口18次；CRUD、序号、显式重读、引导关闭焦点/滚动、SDK hash、真实tools.invoke与无模型提示通过。官方独立mock sampling精确fixture通过。
+- Playwright/Edge真实1280×900、360×640验证：失效状态准确、恢复操作可见、草稿完整、无横向溢出；人工恢复后返回绿色已连接且输入仍为原稿。Browser插件不可用，IAB用于最后打开体验。
+
+为保护旧5198页面草稿，本轮使用独立bundle与新5208入口，不刷新旧页；最终体验服务使用`--no-llm --storage legacy`。新会话中的旧笔记仍不保证保留。CI配置已加入`npm run test:session`并上传脱敏报告，本轮尚未提交/推送或运行远端CI；下文历史CI链接不能代替本轮结果。
+
+question.md SHA-256：`E0CBC6893AD144FA9252650B9285ECC687812E9D80B588E6D52F8CEFC1BD15B3`。
+
 ## 2026-10-30：容量拒绝恢复与体验入口控件
 
 测试先复现红态：`too_large` 保存后仍为 reconciling、删除后笔记未恢复、App 草稿只读；预览中 Mobile 仍可见。修复只将精确字符串 `too_large` 归类为 Host 明确拒绝，清除 mutation、恢复 ready，并使用固定中文提示。保存失败保留原稿，删除失败恢复列表；无自动重试或数据清理。缺失、未知、相似 code 及 timeout/transport 继续隔离，只有读到精确的待提交版本才确认未知写入。

@@ -67,7 +67,7 @@ validate 执行 `anna-app validate --strict --bundle ./bundle`；harness 执行 
 
 开发体验使用 `npm run dev`（或 `npm run dev:preview`），会构建 bundle、启动 watch、启动官方 Anna harness，并在 [localhost:5198](http://localhost:5198/) 提供自适应预览。退出时 Ctrl+C。bundle 修改只重载内层 iframe；外层 dashboard 刷新或重启 dev 可能清空 legacy 内存数据，这是题目允许的生命周期。
 
-自适应预览仅为官方 dashboard 增加布局 CSS：窗口跟随浏览器可用空间，日志栏在窄屏移至下方，调试地址不在工具栏展示。HTTP、WebSocket、Runtime SDK、storage 与 tools 请求仍由真实 Anna harness 处理，不是业务 HTTP 后端或 UI mock。代理固定转发到本机上游，只监听 loopback；官方 CLI 的网络监听行为保持原样。`npm run dev:harness` 保留未经预览层调整的题目验收入口，固定默认尺寸为864×760。
+自适应预览为官方 dashboard 增加布局 CSS 和手动会话恢复适配：窗口跟随浏览器可用空间，日志栏在窄屏移至下方，调试地址不在工具栏展示。HTTP、WebSocket、Runtime SDK、storage 与 tools 请求仍由真实 Anna harness 处理，不是业务 HTTP 后端或 UI mock。代理固定转发到本机上游，只监听 loopback；官方 CLI 的网络监听行为保持原样。`npm run dev:harness` 保留未经预览层调整的题目验收入口，固定默认尺寸为864×760。
 
 体验入口隐藏 Mobile、主题和语言切换：Mini Notes 目前采用自适应的浅色中文界面，没有实现这些切换功能。Desktop 和 record 保留；需要查看官方完整调试控件时使用 `npm run dev:harness`。隐藏规则仅注入预览层，不修改官方 dashboard 文件、App manifest 或 Anna Runtime。
 
@@ -95,6 +95,23 @@ UI 仅在真实收到上述明确错误后显示“当前为无模型验收模�
 可自动驱动同一真实流程：保持 harness 运行，在另一终端执行 `npm run test:harness`。本机使用独立无头 Edge，不读取个人浏览器资料；Linux CI 使用 `PLAYWRIGHT_CHANNEL=chromium` 和 `npx playwright install --with-deps chromium`。截图只保存 App，不保存带临时 window token 的 dashboard 地址栏。
 
 上面的测试默认连接原始5180入口。验证自适应5198入口时运行 `npm run test:harness -- --url http://localhost:5198/`；也可设置 `HARNESS_URL`。两者执行同一组真实storage/tools断言，预览层没有替代Host实现。
+
+### 会话失效与草稿恢复
+
+固定版本官方 harness 同时只保留一个开发会话。同一 Host 的另一个标签页新建会话会关闭旧会话；Host重启也会使页面持有的会话失效。App每15秒在可见页面经Anna storage做只读同步，窗口恢复焦点时也检查。连接指示区分检查中、已连接、暂不可用和会话失效；一般参数/模型错误不误报失效，失效后迟到的成功也不会恢复旧连接。
+
+草稿保留在当前编辑器。预览入口会出现“保留草稿并恢复会话”和“复制草稿”；恢复只能由用户点击，旧legacy笔记不保证保留，其他标签页可能随之失效。外壳仅在内存暂存草稿，通过官方`/api/session/create`重建会话并mount新的Anna iframe，握手将草稿交还、React输入框提交后才清除缓存。笔记仍经Runtime读写，不自动重放保存或恢复旧笔记。草稿不进入URL、浏览器持久化、日志或recording。
+
+如果交还前已输入新内容，原输入不被覆盖；复制当前输入并清空后，可用“取回恢复草稿”取回待交还内容。存在mutation或未知写入时，新会话恢复和草稿取回均被禁用；请保留页面并重新读取确认，不能用换会话证明旧写入失败。原始官方入口不注入恢复适配，只提供复制及手动重新打开说明。草稿过长或恢复失败也保持原页，允许复制后手动处理。
+
+预览收到Host watch更新时仅在标题栏显示提示，保留编辑器，不自动重载；需要加载代码更新时，请先保留草稿再手动刷新。此行为仅作用于预览外壳同源`/ws`的reload事件，官方原始调试入口保持不变。
+
+```sh
+npm run build
+npm run test:session
+```
+
+该回归脚本复制bundle并启动自己独占的真实Host、预览与浏览器，覆盖两标签页抢占、实际watch更新、Host停机/重启、手动失败/重试和丢写入回执后的隔离，不访问正在体验的5198会话。也可用`-- --bundle /absolute/path/to/bundle`验证独立构建。CI已接入此命令，报告在`.tools/session-recovery-*/report.json`，无正文或会话凭据。
 
 ## 后端：官方 mock sampling 单独验证
 

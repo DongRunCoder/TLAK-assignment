@@ -113,8 +113,22 @@ h2 {
   background: #b77912;
 }
 
-.connection-state[data-status="ready"] .connection-dot { background: #28bf56; }
-.connection-state[data-status="failed"] .connection-dot { background: var(--color-error); }
+.connection-state[data-status="online"] .connection-dot { background: #28bf56; }
+.connection-state[data-status="expired"] .connection-dot,
+.connection-state[data-status="unavailable"] .connection-dot { background: var(--color-error); }
+
+.session-recovery {
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: var(--color-panel);
+  overflow-wrap: anywhere;
+}
+.session-recovery p { margin: 0 0 12px; line-height: 1.7; }
+.session-recovery p:last-child { margin-bottom: 0; }
+.session-recovery button { max-width: 100%; margin: 0 12px 8px 0; vertical-align: middle; }
+.session-recovery .secondary { padding: 8px 12px; }
 
 .storage-status {
   margin: 8px 0 20px;

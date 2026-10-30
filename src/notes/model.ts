@@ -1,3 +1,5 @@
+import { classifySessionError } from '../anna/session';
+
 export interface Note { id: string; content: string; sequence: number; createdAt: string }
 export interface NotesDocument { schemaVersion: 1; revision: number; nextSequence: number; notes: Note[] }
 export const MAX_NOTES = 100;
@@ -55,4 +57,9 @@ export function parseDocument(value: unknown): NotesDocument {
 }
 
 export const documentFingerprint = (document: NotesDocument): string => JSON.stringify(document);
-export const messageOf = (error: unknown): string => error instanceof Error ? error.message : String(error);
+export const messageOf = (error: unknown): string => {
+  const session = classifySessionError(error);
+  if (session === 'expired') return 'Anna 会话已失效；草稿仍保留在当前页面。';
+  if (session === 'unavailable') return 'Anna 暂不可用，请保留草稿并稍后重新读取。';
+  return error instanceof Error ? error.message : String(error);
+};
